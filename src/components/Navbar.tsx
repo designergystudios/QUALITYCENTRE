@@ -41,7 +41,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navLinks = [
     { id: 'home', label: 'Home', href: '#home' },
-    { id: 'video-explainer', label: 'Explainer Video', href: '#video-explainer', isHighlight: true },
     { id: 'telemetry', label: 'Telemetry OS', href: '#telemetry' },
     { id: 'gallery', label: 'Media Gallery', href: '#gallery' },
     { id: 'about', label: 'About Us', href: '#about' },
@@ -114,10 +113,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                       : 'text-slate-600 hover:text-cyan-700 hover:bg-white'
                   }`}
                 >
-                  {link.isHighlight && (
-                    <Play className="w-2.5 h-2.5 fill-[#00A9CF] text-[#00A9CF] animate-pulse" />
-                  )}
-
                   {isActive && (
                     <motion.div
                       layoutId="activeNavIndicator"
@@ -276,9 +271,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        {link.isHighlight && (
-                          <Play className="w-3 h-3 fill-amber-500 text-amber-500" />
-                        )}
                         <span>{link.label}</span>
                       </div>
                       <ChevronRight
