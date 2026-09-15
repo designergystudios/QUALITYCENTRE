@@ -57,6 +57,8 @@ export const AdminBackend: React.FC = () => {
     exportConfigJson,
     importConfigJson,
     uploadLogoToDatabase,
+    uploadClientLogoToStorage,
+    uploadStoryImageToStorage,
     isDatabaseConnected,
     lastDatabaseSync,
   } = useCms();
@@ -124,47 +126,66 @@ export const AdminBackend: React.FC = () => {
     setTimeout(() => setSaveToast(null), 3000);
   };
 
-  const handleSimulatedUpload = (file: File, onSuccess: (url: string) => void) => {
+  // Real upload to Supabase Storage bucket
+  const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     if (file.size > 20 * 1024 * 1024) {
       setUploadError('File size must be under 20MB.');
       return;
     }
+
     setIsUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(25);
     setUploadingFileName(file.name);
     setUploadError(null);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const res = event.target?.result as string;
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 25;
-        setUploadProgress(progress);
-        if (progress >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          setUploadingFileName(null);
-          if (res) {
-            onSuccess(res);
-            showToast(`File uploaded successfully to Supabase Storage database!`);
-          }
-        }
-      }, 150);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setUploadProgress(60);
+      const publicUrl = await uploadClientLogoToStorage(file, newLogoName || file.name);
+      setUploadProgress(100);
+      setNewLogoUrl(publicUrl);
+      setIsUploading(false);
+      setUploadingFileName(null);
+      showToast(`Uploaded ${file.name} to Supabase Cloud Storage (client-logos)!`);
+    } catch (err: any) {
+      console.error('Supabase client logo upload error:', err);
+      setIsUploading(false);
+      setUploadingFileName(null);
+      setUploadError('Failed to upload to Supabase Storage: ' + (err?.message || 'Check network connection'));
+      showToast('Upload error: failed to push to Supabase bucket');
+    }
   };
 
-  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    handleSimulatedUpload(file, (url) => setNewLogoUrl(url));
-  };
 
-  const handleStoryImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    handleSimulatedUpload(file, (url) => setStoryImageUrl(url));
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError('File size must be under 20MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(25);
+    setUploadingFileName(file.name);
+    setUploadError(null);
+
+    try {
+      setUploadProgress(60);
+      const publicUrl = await uploadStoryImageToStorage(file, storyClientName || file.name);
+      setUploadProgress(100);
+      setStoryImageUrl(publicUrl);
+      setIsUploading(false);
+      setUploadingFileName(null);
+      showToast(`Story image uploaded to Supabase Storage!`);
+    } catch (err: any) {
+      console.error('Supabase story upload error:', err);
+      setIsUploading(false);
+      setUploadingFileName(null);
+      setUploadError('Failed to upload to Supabase Storage: ' + (err?.message || 'Check network connection'));
+    }
   };
 
   const handleAddSuccessStory = (e: React.FormEvent) => {
@@ -200,22 +221,38 @@ export const AdminBackend: React.FC = () => {
     showToast('Success story added to database successfully!');
   };
 
-  const handleAddClientLogo = (e: React.FormEvent) => {
+  const handleAddClientLogo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLogoName || !newLogoUrl) {
       setUploadError('Please provide client name and upload or provide logo URL.');
       return;
     }
+
+    let resolvedLogoUrl = newLogoUrl;
+    // If it's still base64 data, upload to Supabase first
+    if (resolvedLogoUrl.startsWith('data:image/')) {
+      setIsUploading(true);
+      setUploadingFileName('Uploading to Supabase Storage...');
+      try {
+        resolvedLogoUrl = await uploadClientLogoToStorage(resolvedLogoUrl, newLogoName);
+      } catch (err) {
+        console.warn('Pre-add Supabase upload notice:', err);
+      } finally {
+        setIsUploading(false);
+        setUploadingFileName(null);
+      }
+    }
+
     addClientLogo({
       name: newLogoName,
       industry: newLogoIndustry || 'Enterprise & Banking',
-      logoUrl: newLogoUrl,
+      logoUrl: resolvedLogoUrl,
     });
     setNewLogoName('');
     setNewLogoIndustry('');
     setNewLogoUrl('');
     setUploadError(null);
-    showToast('Client logo added to carousel successfully!');
+    showToast('Client logo saved and synchronized to cloud database!');
   };
 
   const handleLogin = (e?: React.FormEvent) => {
@@ -1208,23 +1245,39 @@ export const AdminBackend: React.FC = () => {
                       </div>
 
                       {newLogoUrl && (
-                        <div className="flex items-center gap-4 p-3 rounded-xl bg-slate-950 border border-slate-800">
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-700">
-                            <img src={newLogoUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <div className="flex items-center gap-4 p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-700 flex-shrink-0 p-1">
+                            <img src={newLogoUrl} alt="Preview" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                           </div>
-                          <div>
-                            <div className="text-xs font-bold text-emerald-400">Logo Ready for Publishing</div>
-                            <div className="text-[10px] text-slate-400 truncate max-w-xs">{newLogoUrl}</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              {newLogoUrl.includes('supabase.co') ? (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                  Supabase Cloud Storage (client-logos)
+                                </span>
+                              ) : newLogoUrl.startsWith('data:image/') ? (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                  Pending Cloud Upload
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                                  Hosted URL
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-400 truncate mt-1">{newLogoUrl}</div>
                           </div>
                         </div>
                       )}
 
                       <button
                         type="submit"
-                        className="py-3 px-6 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 shadow-md active:scale-95"
+                        disabled={isUploading}
+                        className="py-3 px-6 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 shadow-md active:scale-95 disabled:opacity-50"
                       >
                         <Plus className="w-4 h-4 text-slate-950" />
-                        <span>Add to Client Logo Carousel</span>
+                        <span>{isUploading ? 'Uploading to Supabase...' : 'Add to Client Logo Carousel'}</span>
                       </button>
                     </form>
                   </div>
@@ -1279,12 +1332,24 @@ USING (bucket_id = 'client-logos');`}
                         >
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-800 flex items-center justify-center border border-slate-600 flex-shrink-0">
-                                <img src={client.logoUrl} alt={client.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-800 flex items-center justify-center border border-slate-600 flex-shrink-0 p-1">
+                                <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                               </div>
                               <div>
                                 <div className="text-xs font-bold text-white">{client.name}</div>
                                 <div className="text-[10px] text-slate-300">{client.industry || 'Enterprise'}</div>
+                                <div className="mt-1">
+                                  {client.logoUrl.includes('supabase.co') ? (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      <span className="w-1 h-1 rounded-full bg-emerald-400"></span>
+                                      Supabase Cloud
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                                      Remote CDN
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
 

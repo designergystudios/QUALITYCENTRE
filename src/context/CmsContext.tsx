@@ -6,6 +6,8 @@ import {
   LIVE_SUPABASE_DB_URL,
   fetchLiveDatabase,
   uploadLogoToLiveStorage,
+  uploadClientLogoToLiveStorage,
+  uploadStoryImageToLiveStorage,
 } from '../lib/supabase';
 
 export interface GalleryItem {
@@ -95,6 +97,8 @@ export interface CmsContextType {
   exportConfigJson: () => string;
   importConfigJson: (jsonString: string) => boolean;
   uploadLogoToDatabase: (image: string, fileName?: string) => Promise<string>;
+  uploadClientLogoToStorage: (fileOrDataUrl: string | File, clientName?: string) => Promise<string>;
+  uploadStoryImageToStorage: (fileOrDataUrl: string | File, storyTitle?: string) => Promise<string>;
   isDatabaseConnected: boolean;
   lastDatabaseSync: Date | null;
 }
@@ -621,17 +625,54 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetch(`/api/gallery/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
+  const uploadClientLogoToStorage = async (fileOrDataUrl: string | File, clientName?: string): Promise<string> => {
+    return uploadClientLogoToLiveStorage(fileOrDataUrl, clientName);
+  };
+
+  const uploadStoryImageToStorage = async (fileOrDataUrl: string | File, storyTitle?: string): Promise<string> => {
+    return uploadStoryImageToLiveStorage(fileOrDataUrl, storyTitle);
+  };
+
   const addClientLogo = (logo: Omit<ClientLogoItem, 'id'>): ClientLogoItem => {
+    const tempId = `logo-${Date.now()}`;
     const newLogo: ClientLogoItem = {
       ...logo,
-      id: `logo-${Date.now()}`,
+      id: tempId,
     };
     setClientLogos((prev) => [newLogo, ...prev]);
-    fetch('/api/client-logos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newLogo),
-    }).catch(() => {});
+
+    (async () => {
+      let finalUrl = logo.logoUrl;
+      if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
+        try {
+          finalUrl = await uploadClientLogoToLiveStorage(finalUrl, logo.name);
+          setClientLogos((prev) =>
+            prev.map((item) => (item.id === tempId ? { ...item, logoUrl: finalUrl } : item))
+          );
+        } catch (err) {
+          console.warn('Direct Supabase logo upload notice:', err);
+        }
+      }
+
+      try {
+        const res = await fetch('/api/client-logos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...newLogo, logoUrl: finalUrl }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.clientLogo?.logoUrl && data.clientLogo.logoUrl !== finalUrl) {
+            setClientLogos((prev) =>
+              prev.map((item) => (item.id === tempId ? { ...item, logoUrl: data.clientLogo.logoUrl } : item))
+            );
+          }
+        }
+      } catch (e) {
+        console.warn('API client-logos sync notice:', e);
+      }
+    })();
+
     return newLogo;
   };
 
@@ -641,17 +682,36 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addSuccessStory = (story: Omit<SuccessStoryItem, 'id' | 'date'>): SuccessStoryItem => {
+    const tempId = `story-${Date.now()}`;
     const newStory: SuccessStoryItem = {
       ...story,
-      id: `story-${Date.now()}`,
+      id: tempId,
       date: new Date().toISOString().split('T')[0],
     };
     setSuccessStories((prev) => [newStory, ...prev]);
-    fetch('/api/success-stories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newStory),
-    }).catch(() => {});
+
+    (async () => {
+      let finalUrl = story.imageUrl;
+      if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
+        try {
+          finalUrl = await uploadStoryImageToLiveStorage(finalUrl, story.clientName);
+          setSuccessStories((prev) =>
+            prev.map((item) => (item.id === tempId ? { ...item, imageUrl: finalUrl } : item))
+          );
+        } catch (err) {
+          console.warn('Direct Supabase story image upload notice:', err);
+        }
+      }
+
+      try {
+        fetch('/api/success-stories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...newStory, imageUrl: finalUrl }),
+        }).catch(() => {});
+      } catch (e) {}
+    })();
+
     return newStory;
   };
 
@@ -753,6 +813,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exportConfigJson,
         importConfigJson,
         uploadLogoToDatabase,
+        uploadClientLogoToStorage,
+        uploadStoryImageToStorage,
         isDatabaseConnected,
         lastDatabaseSync,
       }}

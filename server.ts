@@ -35,10 +35,15 @@ async function syncDatabaseToSupabase(data: any) {
 }
 
 // Helper to upload image to live Supabase storage bucket
-async function uploadImageToSupabase(buffer: Buffer, filename: string, mimeType: string): Promise<string | null> {
+async function uploadImageToSupabase(
+  buffer: Buffer,
+  filename: string,
+  mimeType: string,
+  bucket = 'client-logos'
+): Promise<string | null> {
   if (!SUPABASE_KEY) return null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/client-logos/${filename}`, {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${filename}`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_KEY,
@@ -49,7 +54,10 @@ async function uploadImageToSupabase(buffer: Buffer, filename: string, mimeType:
       body: buffer,
     });
     if (res.ok) {
-      return `${SUPABASE_URL}/storage/v1/object/public/client-logos/${filename}?v=${Date.now()}`;
+      return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}?v=${Date.now()}`;
+    } else {
+      const errText = await res.text();
+      console.warn(`Supabase storage upload returned ${res.status}:`, errText);
     }
   } catch (e) {
     console.warn('Failed to upload image to Supabase storage:', e);
@@ -195,8 +203,58 @@ app.post('/api/hero', (req: Request, res: Response) => {
   res.json({ success: true, heroConfig: db.heroConfig });
 });
 
+// Dedicated endpoint to upload client logo to Supabase storage
+app.post('/api/upload-client-logo', async (req: Request, res: Response) => {
+  const { image, fileName, bucket = 'client-logos', clientName } = req.body;
+  if (!image) {
+    return res.status(400).json({ error: 'No image provided' });
+  }
+
+  let finalLogoUrl = image;
+
+  if (typeof image === 'string' && image.startsWith('data:image/')) {
+    try {
+      const matches = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (matches) {
+        let ext = matches[1].toLowerCase();
+        let mimeType = `image/${ext}`;
+        if (ext === 'svg+xml') { ext = 'svg'; mimeType = 'image/svg+xml'; }
+        if (ext === 'jpeg') { ext = 'jpg'; mimeType = 'image/jpeg'; }
+        const buffer = Buffer.from(matches[2], 'base64');
+        const cleanName = (clientName || 'client')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .slice(0, 24);
+        const uniqueFileName = fileName || `client-${cleanName}-${Date.now()}.${ext}`;
+
+        // Save local copy for fallback
+        try {
+          const targetPath = path.join(UPLOADS_DIR, uniqueFileName);
+          fs.writeFileSync(targetPath, buffer);
+          finalLogoUrl = `/uploads/${uniqueFileName}`;
+        } catch {}
+
+        // Upload to live Supabase Storage bucket for cross-device global availability
+        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType, bucket);
+        if (supabaseUrl) {
+          finalLogoUrl = supabaseUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to upload client logo to Supabase storage:', e);
+    }
+  }
+
+  res.json({
+    success: true,
+    logoUrl: finalLogoUrl,
+    isCloudHosted: finalLogoUrl.includes('supabase.co'),
+  });
+});
+
 // Client logos CRUD
-app.post('/api/client-logos', (req: Request, res: Response) => {
+app.post('/api/client-logos', async (req: Request, res: Response) => {
   const db = readDatabase();
   if (!db) return res.status(500).json({ error: 'Database unavailable' });
 
@@ -206,21 +264,36 @@ app.post('/api/client-logos', (req: Request, res: Response) => {
       const matches = logoUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
       if (matches) {
         let ext = matches[1].toLowerCase();
-        if (ext === 'svg+xml') ext = 'svg';
-        if (ext === 'jpeg') ext = 'jpg';
+        let mimeType = `image/${ext}`;
+        if (ext === 'svg+xml') { ext = 'svg'; mimeType = 'image/svg+xml'; }
+        if (ext === 'jpeg') { ext = 'jpg'; mimeType = 'image/jpeg'; }
         const buffer = Buffer.from(matches[2], 'base64');
-        const uniqueFileName = `client-${Date.now()}-${Math.floor(Math.random()*1000)}.${ext}`;
-        const targetPath = path.join(UPLOADS_DIR, uniqueFileName);
-        fs.writeFileSync(targetPath, buffer);
-        logoUrl = `/uploads/${uniqueFileName}`;
+        const cleanName = (req.body.name || 'client')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .slice(0, 24);
+        const uniqueFileName = `client-${cleanName}-${Date.now()}.${ext}`;
+
+        // Save local copy
+        try {
+          const targetPath = path.join(UPLOADS_DIR, uniqueFileName);
+          fs.writeFileSync(targetPath, buffer);
+          logoUrl = `/uploads/${uniqueFileName}`;
+        } catch {}
+
+        // Upload directly to live Supabase Storage bucket
+        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType, 'client-logos');
+        if (supabaseUrl) {
+          logoUrl = supabaseUrl;
+        }
       }
     } catch (e) {
-      console.warn('Could not save client logo to disk, using data URL', e);
+      console.warn('Could not save client logo to Supabase storage:', e);
     }
   }
 
   const newLogo = {
-    id: `logo-${Date.now()}`,
+    id: req.body.id || `logo-${Date.now()}`,
     name: req.body.name || 'Client',
     industry: req.body.industry || 'Enterprise',
     logoUrl: logoUrl,
@@ -241,14 +314,42 @@ app.delete('/api/client-logos/:id', (req: Request, res: Response) => {
 });
 
 // Success stories CRUD
-app.post('/api/success-stories', (req: Request, res: Response) => {
+app.post('/api/success-stories', async (req: Request, res: Response) => {
   const db = readDatabase();
   if (!db) return res.status(500).json({ error: 'Database unavailable' });
+
+  let imageUrl = req.body.imageUrl;
+  if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('data:image/')) {
+    try {
+      const matches = imageUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (matches) {
+        let ext = matches[1].toLowerCase();
+        let mimeType = `image/${ext}`;
+        if (ext === 'jpeg') ext = 'jpg';
+        const buffer = Buffer.from(matches[2], 'base64');
+        const uniqueFileName = `story-${Date.now()}.${ext}`;
+
+        try {
+          const targetPath = path.join(UPLOADS_DIR, uniqueFileName);
+          fs.writeFileSync(targetPath, buffer);
+          imageUrl = `/uploads/${uniqueFileName}`;
+        } catch {}
+
+        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType, 'client-logos');
+        if (supabaseUrl) {
+          imageUrl = supabaseUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not save story image to Supabase storage:', e);
+    }
+  }
 
   const newStory = {
     id: req.body.id || `story-${Date.now()}`,
     date: req.body.date || new Date().toISOString().split('T')[0],
     ...req.body,
+    imageUrl: imageUrl,
   };
 
   db.successStories = [newStory, ...(db.successStories || [])];
