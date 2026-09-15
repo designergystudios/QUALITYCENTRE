@@ -1,0 +1,406 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'motion/react';
+import {
+  ShieldCheck,
+  ArrowRight,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Video,
+  Sparkles,
+  Award,
+  CheckCircle2,
+  ChevronDown,
+  Image as ImageIcon,
+  Sliders,
+  Settings,
+} from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { useCms } from '../context/CmsContext';
+import { AfroPattern } from './AfroPattern';
+
+interface HeroProps {
+  onOpenConsultation: (standard?: string) => void;
+  onExploreSolutions: () => void;
+}
+
+export const Hero: React.FC<HeroProps> = ({
+  onOpenConsultation,
+  onExploreSolutions,
+}) => {
+  const { isDark } = useTheme();
+  const { heroConfig, updateHeroConfig, openAdmin } = useCms();
+
+  // Background Video States & Controls
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const [videoError, setVideoError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const isVideoMode = heroConfig.bgMode === 'video' && !videoError;
+
+  // Sync playback state when mode changes
+  useEffect(() => {
+    if (videoRef.current && isVideoMode) {
+      videoRef.current
+        .play()
+        .then(() => setIsVideoPlaying(true))
+        .catch(() => {
+          // Autoplay policy or video load issue: gracefully keep playing or toggle
+          setIsVideoPlaying(false);
+        });
+    }
+  }, [isVideoMode, heroConfig.videoUrl]);
+
+  const toggleVideoPlayback = () => {
+    if (!videoRef.current) return;
+    if (isVideoPlaying) {
+      videoRef.current.pause();
+      setIsVideoPlaying(false);
+    } else {
+      videoRef.current
+        .play()
+        .then(() => setIsVideoPlaying(true))
+        .catch(() => {});
+    }
+  };
+
+  const toggleVideoAudio = () => {
+    if (!videoRef.current) return;
+    videoRef.current.muted = !isVideoMuted;
+    setIsVideoMuted(!isVideoMuted);
+  };
+
+  const toggleBackgroundMode = () => {
+    const nextMode = heroConfig.bgMode === 'video' ? 'infographic' : 'video';
+    updateHeroConfig({ bgMode: nextMode });
+    setVideoError(false);
+  };
+
+  const cycleOpacity = () => {
+    const current = heroConfig.videoOpacity;
+    let next = 0.35;
+    if (current <= 0.25) next = 0.4;
+    else if (current <= 0.4) next = 0.6;
+    else next = 0.2;
+    updateHeroConfig({ videoOpacity: next });
+  };
+
+  const scrollToExplainer = () => {
+    const el = document.getElementById('explainer') || document.getElementById('video-explainer');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <section
+      id="home"
+      className={`relative min-h-[92vh] flex items-center justify-center pt-28 pb-20 lg:pt-36 lg:pb-28 overflow-hidden transition-colors duration-300 ${
+        isDark ? 'bg-[#080C14]' : 'bg-slate-50'
+      }`}
+    >
+      {/* =========================================================
+          1. FULL CINEMATIC BACKGROUND LAYER (VIDEO & INFOGRAPHIC)
+          ========================================================= */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {/* Foundation Layer: High-Resolution ISO Infographic Architecture Poster */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-700 ${
+            isVideoMode ? 'opacity-30' : 'opacity-85'
+          }`}
+        >
+          <img
+            src={heroConfig.infographicUrl}
+            alt="Quality Centre ISO Compliance Architecture Infographic"
+            className="w-full h-full object-cover object-center transform scale-105"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
+        {/* Video Layer (Active when video mode is on and error free) */}
+        {heroConfig.bgMode === 'video' && !videoError && (
+          <video
+            ref={videoRef}
+            src={heroConfig.videoUrl}
+            autoPlay
+            loop
+            muted={isVideoMuted}
+            playsInline
+            onError={() => {
+              console.warn('Video background encountered an error, falling back to infographic.');
+              setVideoError(true);
+            }}
+            style={{ opacity: heroConfig.videoOpacity }}
+            className="w-full h-full object-cover transition-opacity duration-700 relative z-0"
+          >
+            <source src={heroConfig.fallbackVideoUrl} type="video/mp4" />
+          </video>
+        )}
+
+        {/* Dynamic Theme Contrast Gradient Mask for Executive Typography Legibility */}
+        <div
+          className={`absolute inset-0 transition-colors duration-500 z-[1] ${
+            isDark
+              ? 'bg-gradient-to-b from-[#080C14]/92 via-[#080C14]/80 to-[#080C14]/95'
+              : 'bg-gradient-to-b from-slate-50/94 via-slate-50/80 to-white/95'
+          }`}
+        />
+      </div>
+
+      {/* 2. Afro-Futuristic Geometric Ambient Overlays */}
+      <AfroPattern
+        variant="diamonds"
+        opacity={isDark ? 0.08 : 0.04}
+        className="inset-0 z-0 pointer-events-none"
+      />
+
+      {/* 3. Logo Blue Glowing Radial Orbs */}
+      <div
+        className={`absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] rounded-full blur-[150px] pointer-events-none z-0 ${
+          isDark ? 'bg-[#00A9CF]/15' : 'bg-[#00A9CF]/12'
+        }`}
+      />
+
+      {/* =========================================================
+          HERO CONTENT CONTAINER (EXPANSIVE, HIGH-CONTRAST LAYOUT)
+          ========================================================= */}
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 z-10 text-center">
+        
+        {/* Top Floating Badge & Background Mode Controls Pill */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+          {/* Brand Authority Pill */}
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className={`inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-colors ${
+              isDark
+                ? 'bg-slate-900/85 border-[#00A9CF]/30 text-[#00A9CF]'
+                : 'bg-white/95 border-cyan-300 text-[#0077B6] shadow-sm'
+            }`}
+          >
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00A9CF] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00A9CF]" />
+            </span>
+            <span className="tracking-wider uppercase font-mono font-bold">
+              {heroConfig.badgeText}
+            </span>
+            <span className="w-1 h-1 rounded-full bg-slate-400" />
+            <span className="text-[#00A9CF] font-mono font-bold">EST. 1998</span>
+          </motion.div>
+
+          {/* Background Interactive Mode Controls (Video vs Infographic + Opacity) */}
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono border backdrop-blur-md transition-colors shadow-sm ${
+              isDark
+                ? 'bg-slate-900/85 border-slate-700 text-slate-300'
+                : 'bg-white/95 border-slate-300 text-slate-700'
+            }`}
+          >
+            {/* Mode Switcher Button: Video vs Infographic */}
+            <button
+              onClick={toggleBackgroundMode}
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-[#00A9CF]/20 text-[#00A9CF] font-bold transition-all"
+              title="Click to toggle between Video Background and Infographic Architecture"
+            >
+              {heroConfig.bgMode === 'video' ? (
+                <>
+                  <Video className="w-3.5 h-3.5" />
+                  <span>BG: Video</span>
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>BG: Infographic</span>
+                </>
+              )}
+            </button>
+
+            {heroConfig.bgMode === 'video' && !videoError && (
+              <>
+                <span className="text-slate-500">|</span>
+                <button
+                  onClick={toggleVideoPlayback}
+                  className="p-1 rounded hover:text-[#00A9CF] transition-colors"
+                  title={isVideoPlaying ? 'Pause video' : 'Play video'}
+                >
+                  {isVideoPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                </button>
+
+                <button
+                  onClick={toggleVideoAudio}
+                  className="p-1 rounded hover:text-[#00A9CF] transition-colors"
+                  title={isVideoMuted ? 'Unmute video' : 'Mute video'}
+                >
+                  {isVideoMuted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={cycleOpacity}
+              className="px-1.5 py-0.5 rounded bg-[#00A9CF]/15 text-[#00A9CF] text-[10px] font-bold hover:bg-[#00A9CF]/25 transition-colors"
+              title="Adjust background opacity"
+            >
+              {Math.round(heroConfig.videoOpacity * 100)}%
+            </button>
+
+            {/* Quick Admin Shortcut */}
+            <button
+              onClick={openAdmin}
+              className="p-1 text-slate-400 hover:text-[#00A9CF] transition-colors ml-1"
+              title="Open Admin CMS to edit hero & media"
+            >
+              <Settings className="w-3 h-3" />
+            </button>
+          </motion.div>
+        </div>
+
+        {/* Hero Headline & Value Proposition */}
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.15 }}
+          className="space-y-5"
+        >
+          <h1
+            className={`text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.12] transition-colors ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}
+          >
+            {heroConfig.headline.includes('faster, easier, and better.') ? (
+              <>
+                {heroConfig.headline.replace('faster, easier, and better.', '')}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A9CF] via-[#0096C7] to-[#0077B6]">
+                  faster, easier, and better.
+                </span>
+              </>
+            ) : (
+              heroConfig.headline
+            )}
+          </h1>
+
+          <p
+            className={`text-base sm:text-lg md:text-xl font-normal leading-relaxed max-w-3xl mx-auto transition-colors ${
+              isDark ? 'text-slate-300' : 'text-slate-600'
+            }`}
+          >
+            {heroConfig.subheadline}
+          </p>
+        </motion.div>
+
+        {/* Action Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.25 }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8"
+        >
+          <button
+            id="hero-explore-solutions-btn"
+            onClick={onExploreSolutions}
+            className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-sm sm:text-base text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all shadow-[0_0_25px_rgba(0,169,207,0.35)] hover:shadow-[0_0_35px_rgba(0,169,207,0.5)] flex items-center justify-center gap-2.5 group active:scale-[0.98]"
+          >
+            <span>{heroConfig.ctaPrimaryText || 'Explore Solutions'}</span>
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          </button>
+
+          <button
+            id="hero-book-audit-btn"
+            onClick={() => onOpenConsultation('ISO 9001 Diagnostic')}
+            className={`w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 backdrop-blur-md active:scale-[0.98] border ${
+              isDark
+                ? 'text-[#00A9CF] bg-slate-900/80 border-[#00A9CF]/40 hover:bg-slate-800/80 hover:text-white'
+                : 'text-[#0077B6] bg-white/90 border-cyan-400 hover:bg-white shadow-md'
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5 text-[#00A9CF]" />
+            <span>{heroConfig.ctaSecondaryText || 'Book ISO Audit'}</span>
+          </button>
+
+          <button
+            onClick={scrollToExplainer}
+            className={`w-full sm:w-auto px-6 py-4 rounded-xl font-medium text-sm sm:text-base transition-all flex items-center justify-center gap-2 ${
+              isDark
+                ? 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Play className="w-4 h-4 text-[#00A9CF]" />
+            <span>Watch Explainer</span>
+          </button>
+        </motion.div>
+
+        {/* Quick Credentials Strip */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.35 }}
+          className={`mt-14 pt-8 border-t grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto transition-colors ${
+            isDark ? 'border-slate-800/80' : 'border-slate-200'
+          }`}
+        >
+          <div className="text-center">
+            <div
+              className={`text-2xl sm:text-3xl font-black font-mono flex items-center justify-center gap-1 ${
+                isDark ? 'text-white' : 'text-slate-900'
+              }`}
+            >
+              <span>350+</span>
+              <span className="text-xs text-[#00A9CF] font-sans font-normal">Certs</span>
+            </div>
+            <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Delivered Across Africa
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="text-2xl sm:text-3xl font-black text-[#00A9CF] font-mono flex items-center justify-center gap-1">
+              <span>99.4%</span>
+            </div>
+            <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              1st-Attempt Pass Rate
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="text-2xl sm:text-3xl font-black text-[#0077B6] dark:text-cyan-300 font-mono flex items-center justify-center gap-1">
+              <span>SoftExpert</span>
+            </div>
+            <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Premier Tech Partner
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="text-2xl sm:text-3xl font-black text-emerald-500 font-mono flex items-center justify-center gap-1">
+              <span>airSlate</span>
+            </div>
+            <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Workflow Automation
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Scroll indicator prompt */}
+        <div className="mt-12 flex justify-center">
+          <button
+            onClick={scrollToExplainer}
+            className="animate-bounce p-2 rounded-full text-slate-400 hover:text-[#00A9CF] transition-colors"
+            title="Scroll down to video explainer"
+          >
+            <ChevronDown className="w-5 h-5" />
+          </button>
+        </div>
+
+      </div>
+    </section>
+  );
+};
+
