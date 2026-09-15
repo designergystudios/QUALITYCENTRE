@@ -44,17 +44,17 @@ export const ClientLogoCarousel: React.FC = () => {
           isDark ? 'from-slate-950 to-transparent' : 'from-slate-100 to-transparent'
         }`} />
 
-        <div className="flex items-center gap-8 sm:gap-12 animate-marquee py-4 px-4 whitespace-nowrap overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-8 sm:gap-12 animate-marquee py-6 px-4 whitespace-nowrap overflow-x-auto no-scrollbar">
           {clientLogos.concat(clientLogos).map((client, idx) => (
             <div
               key={`${client.id}-${idx}`}
-              className={`flex items-center gap-3 px-6 py-4 rounded-2xl border transition-all duration-300 flex-shrink-0 group hover:-translate-y-1 shadow-sm ${
+              className={`flex items-center gap-4 px-8 py-6 rounded-2xl border transition-all duration-300 flex-shrink-0 group hover:-translate-y-1 shadow-md ${
                 isDark
-                  ? 'bg-slate-900/60 border-slate-800 hover:border-[#00A9CF]/50 hover:bg-slate-900'
-                  : 'bg-white border-slate-200 hover:border-[#00A9CF]/50 hover:shadow-md'
+                  ? 'bg-slate-900/80 border-slate-800 hover:border-[#00A9CF]/60 hover:bg-slate-900'
+                  : 'bg-white border-slate-200 hover:border-[#00A9CF]/60 hover:shadow-lg'
               }`}
             >
-              <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-slate-700">
+              <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border-2 border-slate-200 dark:border-slate-700 shadow-inner">
                 <img
                   src={client.logoUrl}
                   alt={client.name}
@@ -63,11 +63,11 @@ export const ClientLogoCarousel: React.FC = () => {
                 />
               </div>
               <div className="text-left">
-                <h5 className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-[#00A9CF] transition-colors">
+                <h5 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-[#00A9CF] transition-colors">
                   {client.name}
                 </h5>
                 {client.industry && (
-                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 block mt-0.5">
                     {client.industry}
                   </span>
                 )}
