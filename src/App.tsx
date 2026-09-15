@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import { ClientLogoCarousel } from './components/ClientLogoCarousel';
 import { ComplianceTelemetry } from './components/ComplianceTelemetry';
 import { Gallery } from './components/Gallery';
 import { About } from './components/About';
@@ -90,6 +91,9 @@ export default function App() {
           onOpenConsultation={(std) => handleOpenConsultation(std)}
           onExploreSolutions={() => handleNavigate('#services')}
         />
+
+        {/* 1.5. Client Logo Carousel */}
+        <ClientLogoCarousel />
 
         {/* 2. Live Compliance Telemetry Cockpit */}
         <ComplianceTelemetry

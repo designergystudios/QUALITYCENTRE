@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useCms } from '../context/CmsContext';
 
 interface LogoProps {
   className?: string;
@@ -15,11 +16,7 @@ export const Logo: React.FC<LogoProps> = ({
   iconOnly = false,
 }) => {
   const { isDark } = useTheme();
-
-  // Signature Quality Centre brand cyan/blue from the logo
-  const qcBlue = '#00A9CF';
-  // Logo text grey: slate-grey in light mode, clean silver in dark mode
-  const textGrey = isDark ? '#E2E8F0' : '#4A5568';
+  const { companyConfig } = useCms();
 
   const heights = {
     sm: 'h-8',
@@ -27,6 +24,25 @@ export const Logo: React.FC<LogoProps> = ({
     lg: 'h-12',
     xl: 'h-16',
   };
+
+  // If custom uploaded logo is configured
+  if (companyConfig.logoType === 'custom' && companyConfig.logoUrl) {
+    return (
+      <div className={`inline-flex items-center select-none ${heights[size]} ${className}`}>
+        <img
+          src={companyConfig.logoUrl}
+          alt={companyConfig.name || 'Logo'}
+          className={`${heights[size]} w-auto object-contain`}
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
+  // Signature Quality Centre brand cyan/blue from the logo
+  const qcBlue = '#00A9CF';
+  // Logo text grey: slate-grey in light mode, clean silver in dark mode
+  const textGrey = isDark ? '#E2E8F0' : '#4A5568';
 
   if (iconOnly || !showText) {
     return (

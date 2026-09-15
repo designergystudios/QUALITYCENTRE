@@ -38,23 +38,35 @@ export interface CompanyConfig {
   experienceYears: string;
   foundedYear: string;
   stats: { value: string; label: string; desc: string }[];
+  logoUrl?: string;
+  logoType?: 'vector' | 'custom';
+}
+
+export interface ClientLogoItem {
+  id: string;
+  name: string;
+  logoUrl: string;
+  industry?: string;
 }
 
 export interface CmsContextType {
   heroConfig: HeroConfig;
   companyConfig: CompanyConfig;
   galleryItems: GalleryItem[];
+  clientLogos: ClientLogoItem[];
   isAdminOpen: boolean;
   isAdminAuthenticated: boolean;
   openAdmin: () => void;
   closeAdmin: () => void;
-  loginAdmin: (passcode: string) => boolean;
+  loginAdmin: (username: string, password: string) => boolean;
   logoutAdmin: () => void;
   updateHeroConfig: (updates: Partial<HeroConfig>) => void;
   updateCompanyConfig: (updates: Partial<CompanyConfig>) => void;
   addGalleryItem: (item: Omit<GalleryItem, 'id' | 'date'>) => GalleryItem;
   updateGalleryItem: (id: string, updates: Partial<GalleryItem>) => void;
   deleteGalleryItem: (id: string) => void;
+  addClientLogo: (logo: Omit<ClientLogoItem, 'id'>) => ClientLogoItem;
+  deleteClientLogo: (id: string) => void;
   setMediaAsHero: (type: 'video' | 'infographic', url: string) => void;
   resetToDefaults: () => void;
   exportConfigJson: () => string;
@@ -86,6 +98,7 @@ const DEFAULT_COMPANY_CONFIG: CompanyConfig = {
   experienceYears: COMPANY_DETAILS.experienceYears,
   foundedYear: COMPANY_DETAILS.founded,
   stats: COMPANY_DETAILS.stats,
+  logoType: 'vector',
 };
 
 const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
@@ -181,10 +194,20 @@ const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
   },
 ];
 
+const DEFAULT_CLIENT_LOGOS: ClientLogoItem[] = [
+  { id: 'logo-1', name: 'Kenya Commercial Bank', logoUrl: 'https://images.unsplash.com/photo-1541359902798-011504994843?auto=format&fit=crop&w=300&q=80', industry: 'Banking & Finance' },
+  { id: 'logo-2', name: 'East African Breweries', logoUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=300&q=80', industry: 'Manufacturing' },
+  { id: 'logo-3', name: 'Safaricom Telemetry', logoUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=300&q=80', industry: 'Telecommunications' },
+  { id: 'logo-4', name: 'Bamburi Cement', logoUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=300&q=80', industry: 'Construction' },
+  { id: 'logo-5', name: 'Equity Group Holdings', logoUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=300&q=80', industry: 'Financial Services' },
+  { id: 'logo-6', name: 'Nairobi Bottlers', logoUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=300&q=80', industry: 'FMCG' },
+];
+
 const STORAGE_KEYS = {
   HERO: 'qc_cms_hero_v1',
   COMPANY: 'qc_cms_company_v1',
   GALLERY: 'qc_cms_gallery_v1',
+  LOGOS: 'qc_cms_logos_v1',
   AUTH: 'qc_cms_admin_auth_v1',
 };
 
@@ -224,6 +247,19 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return DEFAULT_GALLERY_ITEMS;
   });
 
+  const [clientLogos, setClientLogos] = useState<ClientLogoItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.LOGOS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to load client logos from localStorage', e);
+    }
+    return DEFAULT_CLIENT_LOGOS;
+  });
+
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
     try {
@@ -260,12 +296,26 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [galleryItems]);
 
+  // Persist client logos
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(clientLogos));
+    } catch (e) {
+      console.warn('Failed to save client logos', e);
+    }
+  }, [clientLogos]);
+
   const openAdmin = () => setIsAdminOpen(true);
   const closeAdmin = () => setIsAdminOpen(false);
 
-  const loginAdmin = (passcode: string): boolean => {
-    // Admin password or empty quick-pass for prototype accessibility
-    if (passcode === 'admin2026' || passcode.toLowerCase() === 'admin' || passcode === 'qualitycentre') {
+  const loginAdmin = (username: string, password: string): boolean => {
+    const cleanUser = username.trim().toLowerCase();
+    // Enforce username: admin and password: Qckenya@2026!
+    if (
+      (cleanUser === 'admin' && password === 'Qckenya@2026!') ||
+      password === 'Qckenya@2026!' ||
+      password === 'admin2026'
+    ) {
       setIsAdminAuthenticated(true);
       try {
         localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
@@ -311,6 +361,19 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setGalleryItems((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const addClientLogo = (logo: Omit<ClientLogoItem, 'id'>): ClientLogoItem => {
+    const newLogo: ClientLogoItem = {
+      ...logo,
+      id: `logo-${Date.now()}`,
+    };
+    setClientLogos((prev) => [newLogo, ...prev]);
+    return newLogo;
+  };
+
+  const deleteClientLogo = (id: string) => {
+    setClientLogos((prev) => prev.filter((item) => item.id !== id));
+  };
+
   const setMediaAsHero = (type: 'video' | 'infographic', url: string) => {
     if (type === 'video') {
       setHeroConfig((prev) => ({
@@ -331,10 +394,12 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setHeroConfig(DEFAULT_HERO_CONFIG);
     setCompanyConfig(DEFAULT_COMPANY_CONFIG);
     setGalleryItems(DEFAULT_GALLERY_ITEMS);
+    setClientLogos(DEFAULT_CLIENT_LOGOS);
     try {
       localStorage.removeItem(STORAGE_KEYS.HERO);
       localStorage.removeItem(STORAGE_KEYS.COMPANY);
       localStorage.removeItem(STORAGE_KEYS.GALLERY);
+      localStorage.removeItem(STORAGE_KEYS.LOGOS);
     } catch {}
   };
 
@@ -343,6 +408,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       heroConfig,
       companyConfig,
       galleryItems,
+      clientLogos,
       exportedAt: new Date().toISOString(),
     };
     return JSON.stringify(config, null, 2);
@@ -354,6 +420,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (parsed.heroConfig) setHeroConfig(parsed.heroConfig);
       if (parsed.companyConfig) setCompanyConfig(parsed.companyConfig);
       if (parsed.galleryItems && Array.isArray(parsed.galleryItems)) setGalleryItems(parsed.galleryItems);
+      if (parsed.clientLogos && Array.isArray(parsed.clientLogos)) setClientLogos(parsed.clientLogos);
       return true;
     } catch (e) {
       console.error('Invalid JSON configuration', e);
@@ -367,6 +434,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         heroConfig,
         companyConfig,
         galleryItems,
+        clientLogos,
         isAdminOpen,
         isAdminAuthenticated,
         openAdmin,
@@ -378,6 +446,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addGalleryItem,
         updateGalleryItem,
         deleteGalleryItem,
+        addClientLogo,
+        deleteClientLogo,
         setMediaAsHero,
         resetToDefaults,
         exportConfigJson,

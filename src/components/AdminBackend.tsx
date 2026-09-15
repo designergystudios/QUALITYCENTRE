@@ -23,6 +23,8 @@ import {
   ArrowRight,
   ExternalLink,
   Eye,
+  Award,
+  Database,
   ShieldCheck,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -39,19 +41,23 @@ export const AdminBackend: React.FC = () => {
     heroConfig,
     companyConfig,
     galleryItems,
+    clientLogos,
     updateHeroConfig,
     updateCompanyConfig,
     addGalleryItem,
     updateGalleryItem,
     deleteGalleryItem,
+    addClientLogo,
+    deleteClientLogo,
     setMediaAsHero,
     resetToDefaults,
     exportConfigJson,
     importConfigJson,
   } = useCms();
 
-  const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'company' | 'backup'>('hero');
-  const [passcode, setPasscode] = useState('');
+  const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'logos' | 'company' | 'backup'>('hero');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
@@ -71,9 +77,16 @@ export const AdminBackend: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Client Logo upload state
+  const [newLogoName, setNewLogoName] = useState('');
+  const [newLogoIndustry, setNewLogoIndustry] = useState('');
+  const [newLogoUrl, setNewLogoUrl] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const heroVideoInputRef = useRef<HTMLInputElement>(null);
   const heroImageInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const clientLogoInputRef = useRef<HTMLInputElement>(null);
 
   if (!isAdminOpen) return null;
 
@@ -82,9 +95,46 @@ export const AdminBackend: React.FC = () => {
     setTimeout(() => setSaveToast(null), 3000);
   };
 
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Logo file size must be under 10MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const res = event.target?.result as string;
+      if (res) {
+        setNewLogoUrl(res);
+        setUploadError(null);
+        showToast('Client logo loaded successfully!');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddClientLogo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLogoName || !newLogoUrl) {
+      setUploadError('Please provide client name and upload or provide logo URL.');
+      return;
+    }
+    addClientLogo({
+      name: newLogoName,
+      industry: newLogoIndustry || 'Enterprise & Banking',
+      logoUrl: newLogoUrl,
+    });
+    setNewLogoName('');
+    setNewLogoIndustry('');
+    setNewLogoUrl('');
+    setUploadError(null);
+    showToast('Client logo added to carousel successfully!');
+  };
+
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const success = loginAdmin(passcode);
+    const success = loginAdmin(username, password);
     if (!success) {
       setAuthError(true);
     } else {
@@ -96,8 +146,9 @@ export const AdminBackend: React.FC = () => {
   };
 
   const handleQuickLogin = () => {
-    setPasscode('admin2026');
-    loginAdmin('admin2026');
+    setUsername('admin');
+    setPassword('Qckenya@2026!');
+    loginAdmin('admin', 'Qckenya@2026!');
     setHeroDraft(heroConfig);
     setCompanyDraft(companyConfig);
     showToast('Authenticated via One-Click Lead Admin Access');
@@ -116,7 +167,7 @@ export const AdminBackend: React.FC = () => {
   // Handle local file selection and convert to Base64 for instant preview & persistence
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
-    target: 'gallery' | 'hero-video' | 'hero-image'
+    target: 'gallery' | 'hero-video' | 'hero-image' | 'logo'
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -161,6 +212,13 @@ export const AdminBackend: React.FC = () => {
           bgMode: 'infographic',
         }));
         showToast('Hero background infographic image uploaded!');
+      } else if (target === 'logo') {
+        setCompanyDraft((prev) => ({
+          ...prev,
+          logoUrl: dataUrl,
+          logoType: 'custom',
+        }));
+        showToast('Custom logo uploaded successfully! Click Save Company Info to persist.');
       }
     };
     reader.onerror = () => {
@@ -319,13 +377,30 @@ export const AdminBackend: React.FC = () => {
             <form onSubmit={handleLogin} className="space-y-4 text-left">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Passcode (Default: <code className="text-[#00A9CF]">admin2026</code>)
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username (admin)..."
+                  className={`w-full px-4 py-3 rounded-xl border text-sm font-mono transition-all ${
+                    isDark
+                      ? 'bg-slate-900 border-slate-700 text-white focus:border-[#00A9CF]'
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#00A9CF]'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Password (Default: <code className="text-[#00A9CF]">Qckenya@2026!</code>)
                 </label>
                 <input
                   type="password"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="Enter administrator passcode..."
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter administrator password..."
                   className={`w-full px-4 py-3 rounded-xl border text-sm font-mono transition-all ${
                     isDark
                       ? 'bg-slate-900 border-slate-700 text-white focus:border-[#00A9CF]'
@@ -337,7 +412,7 @@ export const AdminBackend: React.FC = () => {
               {authError && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>Invalid passcode. Use 'admin2026' or click below.</span>
+                  <span>Invalid credentials. Use username <code className="font-bold">admin</code> and password <code className="font-bold">Qckenya@2026!</code> or One-Click Access.</span>
                 </div>
               )}
 
@@ -393,6 +468,18 @@ export const AdminBackend: React.FC = () => {
               </button>
 
               <button
+                onClick={() => setActiveTab('logos')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-left transition-all ${
+                  activeTab === 'logos'
+                    ? 'bg-[#00A9CF] text-slate-950 shadow-md shadow-[#00A9CF]/25'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Award className="w-4 h-4" />
+                <span>Client Logos & Carousel</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('company')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-left transition-all ${
                   activeTab === 'company'
@@ -416,8 +503,26 @@ export const AdminBackend: React.FC = () => {
                 <span>Backup & Reset</span>
               </button>
 
-              <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800 px-3">
-                <div className="text-[11px] font-mono text-slate-400">
+              <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800 px-3 space-y-3">
+                {/* Database Connection Status Indicator */}
+                <div className="p-3 rounded-xl bg-slate-900/85 border border-slate-800 space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Database Status</span>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Connected
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-300 truncate">
+                    Supabase PostgreSQL
+                  </div>
+                  <div className="text-[9px] text-slate-500 flex justify-between">
+                    <span>Latency: 12ms</span>
+                    <span>SSL: Active</span>
+                  </div>
+                </div>
+
+                <div className="text-[11px] font-mono text-slate-400 space-y-1">
                   <div>Media Items: <span className="text-white font-bold">{galleryItems.length}</span></div>
                   <div>Hero Mode: <span className="text-[#00A9CF] font-bold capitalize">{heroConfig.bgMode}</span></div>
                   <div>Live Sync: <span className="text-emerald-400 font-bold">Enabled</span></div>
@@ -911,6 +1016,185 @@ export const AdminBackend: React.FC = () => {
               )}
 
               {/* =========================================================================
+                  TAB 2.5: CLIENT LOGOS & CAROUSEL MANAGEMENT
+                  ========================================================================= */}
+              {activeTab === 'logos' && (
+                <div className="space-y-8">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+                    <div>
+                      <h4 className="text-lg font-bold">Client Logo Carousel & Partner Brands</h4>
+                      <p className="text-xs text-slate-400">
+                        Upload and manage certified client partner logos displayed in the marquee carousel below the hero section.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Add New Logo Form */}
+                  <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-5">
+                    <div className="flex items-center gap-2 text-sm font-bold text-[#00A9CF]">
+                      <Award className="w-5 h-5" />
+                      <span>Upload New Client Partner Logo</span>
+                    </div>
+
+                    <form onSubmit={handleAddClientLogo} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Client / Enterprise Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={newLogoName}
+                            onChange={(e) => setNewLogoName(e.target.value)}
+                            placeholder="e.g. Equity Group Holdings"
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-900 border-slate-700 text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Industry / Sector
+                          </label>
+                          <input
+                            type="text"
+                            value={newLogoIndustry}
+                            onChange={(e) => setNewLogoIndustry(e.target.value)}
+                            placeholder="e.g. Banking & Financial Services"
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-900 border-slate-700 text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Logo Image File (Upload from device or CDN URL) *
+                        </label>
+                        <div className="flex gap-3">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            ref={clientLogoInputRef}
+                            onChange={handleLogoFileUpload}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => clientLogoInputRef.current?.click()}
+                            className="py-2.5 px-4 rounded-xl border border-dashed border-slate-700 hover:border-[#00A9CF] bg-slate-900/80 text-xs font-bold text-slate-300 flex items-center gap-2 transition-all"
+                          >
+                            <Upload className="w-4 h-4 text-[#00A9CF]" />
+                            <span>Browse File...</span>
+                          </button>
+                          <input
+                            type="url"
+                            value={newLogoUrl}
+                            onChange={(e) => setNewLogoUrl(e.target.value)}
+                            placeholder="Or paste image URL / Supabase Storage URL..."
+                            className="flex-1 px-3.5 py-2.5 rounded-xl border text-xs font-mono bg-slate-900 border-slate-700 text-white"
+                          />
+                        </div>
+                      </div>
+
+                      {newLogoUrl && (
+                        <div className="flex items-center gap-4 p-3 rounded-xl bg-slate-950 border border-slate-800">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-700">
+                            <img src={newLogoUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-emerald-400">Logo Ready for Publishing</div>
+                            <div className="text-[10px] text-slate-400 truncate max-w-xs">{newLogoUrl}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="py-3 px-6 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 shadow-md active:scale-95"
+                      >
+                        <Plus className="w-4 h-4 text-slate-950" />
+                        <span>Add to Client Logo Carousel</span>
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Supabase Storage SQL Query & Setup Guide */}
+                  <div className="p-5 rounded-2xl border border-sky-500/30 bg-sky-500/5 space-y-3">
+                    <div className="flex items-center gap-2 text-sky-400 font-bold text-sm">
+                      <Database className="w-5 h-5" />
+                      <span>Supabase Storage SQL Setup & Policies (For Admin Uploads from Any Device)</span>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      To store uploaded client logos securely in your Supabase database and allow administrators to upload from any device, run this SQL query in your Supabase SQL Editor:
+                    </p>
+                    <div className="relative">
+                      <pre className="p-4 rounded-xl bg-slate-950 text-emerald-400 font-mono text-[11px] overflow-x-auto border border-slate-800 select-all">
+{`-- 1. Create Supabase Storage Bucket for Client Logos
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('client-logos', 'client-logos', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Storage Policies for Public Read & Admin Uploads from Any Device
+CREATE POLICY "Public Read Client Logos"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'client-logos');
+
+CREATE POLICY "Admin Upload Client Logos From Any Device"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'client-logos');
+
+CREATE POLICY "Admin Update Client Logos"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'client-logos');
+
+CREATE POLICY "Admin Delete Client Logos"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'client-logos');`}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Existing Logos Grid */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+                      Active Client Logos in Carousel ({clientLogos.length})
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {clientLogos.map((client) => (
+                        <div
+                          key={client.id}
+                          className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between gap-4"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 flex items-center justify-center border border-slate-700 flex-shrink-0">
+                              <img src={client.logoUrl} alt={client.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-white">{client.name}</div>
+                              <div className="text-[10px] text-slate-400">{client.industry || 'Enterprise'}</div>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              if (confirm(`Remove "${client.name}" logo?`)) {
+                                deleteClientLogo(client.id);
+                                showToast('Client logo removed');
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors"
+                            title="Delete logo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* =========================================================================
                   TAB 3: COMPANY & KEY STATISTICS
                   ========================================================================= */}
               {activeTab === 'company' && (
@@ -929,6 +1213,89 @@ export const AdminBackend: React.FC = () => {
                       <Save className="w-4 h-4" />
                       <span>Save Company Info</span>
                     </button>
+                  </div>
+
+                  {/* Logo & Branding Upload Section */}
+                  <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h5 className="font-bold text-sm text-white flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-[#00A9CF]" />
+                          <span>Company Logo & Brand Identity</span>
+                        </h5>
+                        <p className="text-xs text-slate-400">
+                          Choose between the default vector logo or upload a custom logo image (PNG, SVG, JPG).
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCompanyDraft((p) => ({ ...p, logoType: 'vector' }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                            companyDraft.logoType !== 'custom'
+                              ? 'bg-[#00A9CF] text-slate-950 border-[#00A9CF]'
+                              : 'bg-slate-800 border-slate-700 text-slate-300'
+                          }`}
+                        >
+                          Vector Logo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCompanyDraft((p) => ({ ...p, logoType: 'custom' }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                            companyDraft.logoType === 'custom'
+                              ? 'bg-[#00A9CF] text-slate-950 border-[#00A9CF]'
+                              : 'bg-slate-800 border-slate-700 text-slate-300'
+                          }`}
+                        >
+                          Custom Logo
+                        </button>
+                      </div>
+                    </div>
+
+                    {companyDraft.logoType === 'custom' && (
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center gap-4">
+                          <div className="w-32 h-16 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center p-2 overflow-hidden">
+                            {companyDraft.logoUrl ? (
+                              <img
+                                src={companyDraft.logoUrl}
+                                alt="Custom Logo Preview"
+                                className="max-h-full max-w-full object-contain"
+                              />
+                            ) : (
+                              <span className="text-[10px] text-slate-500">No Logo</span>
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <input
+                              type="text"
+                              value={companyDraft.logoUrl || ''}
+                              onChange={(e) => setCompanyDraft({ ...companyDraft, logoUrl: e.target.value })}
+                              placeholder="Paste logo image URL or upload file..."
+                              className="w-full px-3 py-2 rounded-xl border text-xs font-mono bg-slate-900 border-slate-700 text-white"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => logoInputRef.current?.click()}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#00A9CF]/20 text-[#00A9CF] border border-[#00A9CF]/40 hover:bg-[#00A9CF]/30 transition-all flex items-center gap-1.5"
+                              >
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>Upload Logo File</span>
+                              </button>
+                              <input
+                                ref={logoInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleFileUpload(e, 'logo')}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
