@@ -182,7 +182,8 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                       <option value="ISO 21001 (Educational Management)">ISO 21001 (Educational Orgs)</option>
                       <option value="ISO 26000 & ESG Sustainability">ISO 26000 & Digital ESG</option>
                       <option value="Unified GRC Architecture">Unified Enterprise GRC</option>
-                      <option value="SoftExpert / airSlate Software Implementation">SoftExpert / airSlate Automation</option>
+                      <option value="PECB Training & Professional Certification">PECB Training & Professional Certification</option>
+                      <option value="SoftExpert Enterprise Software Implementation">SoftExpert Enterprise Software</option>
                       <option value="General ISO Consultation & Gap Analysis">General ISO Diagnostic</option>
                     </select>
                   </div>
@@ -402,7 +403,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                     onChange={(e) =>
                       setFormData({ ...formData, comments: e.target.value })
                     }
-                    placeholder="e.g. Current pain points with document control, upcoming external certification body audit, desire to automate CAPAs with airSlate/SoftExpert..."
+                    placeholder="e.g. Current pain points with document control, upcoming external certification body audit, PECB course registration, desire to deploy SoftExpert..."
                     className={`w-full px-3.5 py-2 rounded-xl text-xs font-medium focus:outline-none focus:border-cyan-400 resize-none border ${
                       isDark
                         ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500'

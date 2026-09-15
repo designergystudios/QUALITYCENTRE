@@ -66,8 +66,8 @@ export const Footer: React.FC<FooterProps> = ({
             </p>
             <p className={`text-[11px] leading-relaxed max-w-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Quality Centre Limited is East Africa’s leading management systems performance,
-              digital transformation, and sustainability consultancy. Official SoftExpert & airSlate
-              Implementation Partner.
+              digital transformation, and sustainability consultancy. Official SoftExpert Partner & PECB
+              Authorized Partner.
             </p>
 
             {/* Nairobi Headquarters Coordinates */}
@@ -199,12 +199,26 @@ export const Footer: React.FC<FooterProps> = ({
                 </button>
               </li>
               <li>
-                <button
-                  onClick={() => onNavigate('#about')}
-                  className="hover:text-cyan-500 transition-colors text-left"
+                <a
+                  href="https://pecb.com/en/newsReleases/pecb-signs-a-partnership-agreement-with-quality-centre-ltd"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-amber-400 transition-colors text-left flex items-center gap-1.5"
                 >
-                  airSlate Workflow Automation
-                </button>
+                  <span>PECB Partnership Agreement</span>
+                  <ExternalLink className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://pecb.com/en"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-amber-400 transition-colors text-left flex items-center gap-1.5"
+                >
+                  <span>PECB Global (pecb.com)</span>
+                  <ExternalLink className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                </a>
               </li>
               <li>
                 <button
@@ -330,7 +344,7 @@ export const Footer: React.FC<FooterProps> = ({
             GRC consulting firm. We architect, implement, train, and prepare organizations for external
             certification. In accordance with ISO 17021 requirements, third-party accredited certification
             audits are administered by accredited certification bodies (e.g. KEBS, SGS, BSI, Bureau Veritas).
-            All trademarks including ISO®, SoftExpert®, and airSlate® belong to their respective proprietors.
+            All trademarks including ISO®, SoftExpert®, and PECB® belong to their respective proprietors.
           </div>
         </div>
 

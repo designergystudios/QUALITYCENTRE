@@ -145,7 +145,7 @@ const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
     type: 'image',
     title: 'Modern ISO & Digital GRC Architecture Infographic',
     description:
-      'Executive system diagram illustrating the convergence of SoftExpert QMS, airSlate automation, and ISO 9001/27001/14001 compliance telemetry.',
+      'Executive system diagram illustrating the convergence of SoftExpert QMS, PECB certification standards, and ISO 9001/27001/14001 compliance telemetry.',
     category: 'infographic',
     mediaUrl: heroInfographicAsset,
     thumbnailUrl: heroInfographicAsset,

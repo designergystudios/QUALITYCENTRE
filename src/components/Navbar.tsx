@@ -323,7 +323,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <span>Nairobi HQ: Chiromo Road</span>
                   <span>•</span>
-                  <span>SoftExpert & airSlate Partners</span>
+                  <span>SoftExpert & PECB Authorized Partners</span>
                 </div>
               </div>
             </div>

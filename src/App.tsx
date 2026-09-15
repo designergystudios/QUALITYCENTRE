@@ -105,7 +105,7 @@ export default function App() {
           onOpenConsultation={(topic) => handleOpenConsultation(topic)}
         />
 
-        {/* 5. About Us Section (Who We Are, Mission, SoftExpert & airSlate Partners) */}
+        {/* 5. About Us Section (Who We Are, Mission, SoftExpert & PECB Partners) */}
         <About onOpenConsultation={(topic) => handleOpenConsultation(topic)} />
 
         {/* 6. Services & Solutions (Interactive Tabs: ISO, Sustainability ESG, GRC) */}

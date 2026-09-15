@@ -31,7 +31,7 @@ export const COMPANY_DETAILS = {
     { value: '350+', label: 'ISO Certifications Enabled', desc: 'Across manufacturing, tech, financial & public sectors' },
     { value: '99.4%', label: 'First-Attempt Audit Pass', desc: 'Uncompromised compliance and digital audit readiness' },
     { value: '12+', label: 'African Nations Served', desc: 'Pan-African footprint across East, Central & West Africa' },
-    { value: '65%', label: 'Audit Prep Time Cut', desc: 'Through automated SoftExpert & airSlate workflows' },
+    { value: '65%', label: 'Audit Prep Time Cut', desc: 'Through automated SoftExpert workflows & PECB-certified auditing frameworks' },
   ],
 };
 
@@ -199,7 +199,7 @@ export const SERVICE_PILLARS: ServicePillar[] = [
       {
         title: 'Document & SOP Version Control',
         description: 'Automated lifecycle management of policies, work instructions, and procedures with role-based cryptographic approvals.',
-        tools: ['airSlate Workflows', 'SoftExpert Document', 'Cloud Repository'],
+        tools: ['PECB Audit Frameworks', 'SoftExpert Document', 'Cloud Repository'],
         icon: 'FileText',
       },
       {
@@ -251,7 +251,7 @@ export const SERVICE_PILLARS: ServicePillar[] = [
       {
         title: 'Automated Scope 1, 2 & 3 Data Collection',
         description: 'IoT energy meter connectors, utility bill document extraction, fuel consumption logs, and automated carbon factoring.',
-        tools: ['airSlate Document Bots', 'Carbon Factor Matrix', 'ERP Sync'],
+        tools: ['PECB Sustainability Criteria', 'Carbon Factor Matrix', 'ERP Sync'],
         icon: 'Cpu',
       },
       {
@@ -333,20 +333,23 @@ export const TECH_PARTNERS: TechPartner[] = [
     logoSvg: 'SoftExpert-QMS',
   },
   {
-    name: 'airSlate',
-    tag: 'Document Workflow & Sign Automation',
-    accentColor: '#F59E0B',
+    name: 'PECB',
+    tag: 'Global Authorized Training & Certification Partner',
+    accentColor: '#D97706',
     description:
-      'Award-winning no-code document workflow platform enabling seamless PDF generation, digital e-signatures, and cross-system data routing.',
-    bestFor: 'Rapid digitization of field audits, incident reporting, vendor onboarding, and contract compliance.',
+      'Premier international certification body providing education, accredited training courses, and professional certification across ISO 9001, ISO/IEC 27001, ISO 14001, ISO 45001, and ISO 22301 under our official partnership agreement.',
+    bestFor: 'Globally accredited personnel certifications, corporate lead auditor training, and ISO professional examinations.',
     features: [
-      'No-Code Workflow Builder with Conditional Routing',
-      'Legally Enforceable Digital E-Signatures (Kenya KICA Compliant)',
-      'Web-to-PDF Automated Compliance Evidence Generation',
-      'Direct Integration with ERPs, Google Workspace & Microsoft 365',
-      'Mobile-First Field Inspection & Incident Forms',
+      'Official PECB Authorized Training & Exam Partner in East Africa',
+      'PECB Certified Lead Auditor & Lead Implementer Courses',
+      'Accredited under ANSI/ISO/IEC 17024 Worldwide Standards',
+      'Comprehensive Certification in ISO 9001, 27001, 14001, 45001, 37001',
+      'Global Registry of Certified Lead Auditors & Systems Specialists',
     ],
-    logoSvg: 'airSlate-Flows',
+    logoSvg: 'PECB-Official',
+    agreementUrl: 'https://pecb.com/en/newsReleases/pecb-signs-a-partnership-agreement-with-quality-centre-ltd',
+    websiteUrl: 'https://pecb.com/en',
+    badge: 'Official Agreement',
   },
 ];
 
@@ -377,10 +380,10 @@ export const APPROACH_STEPS: ApproachStep[] = [
     deliverables: [
       'Digital Document & SOP Architecture',
       'Automated CAPA & Non-Conformity Logic',
-      'Configured SoftExpert / airSlate Workflow Templates',
+      'Configured SoftExpert / PECB Auditing Framework Templates',
       'Customized KPI & Quality Objective Dashboards',
     ],
-    digitalTools: ['airSlate No-Code Bots', 'SoftExpert Process Modeler'],
+    digitalTools: ['PECB Audit & Exam Portal', 'SoftExpert Process Modeler'],
     afroPatternKey: 'pattern-diamond',
   },
   {
@@ -426,13 +429,13 @@ export const CASE_STUDIES: CaseStudy[] = [
     challenge:
       'Managing duplicate paper documentation across 3 production plants for ISO 9001 and ISO 22000 resulted in audit delays, lost inspection logs, and recurring non-conformities.',
     solution:
-      'Deployed SoftExpert EQM and airSlate to digitize 180+ standard operating procedures, automated batch hazard logging, and integrated digital supplier verification.',
+      'Deployed SoftExpert EQM alongside PECB accredited lead auditor procedures to digitize 180+ standard operating procedures, automated batch hazard logging, and integrated digital supplier verification.',
     results: [
       { metric: '65%', label: 'Reduction in Audit Prep Time' },
       { metric: '0', label: 'Major External Findings in 4 Years' },
       { metric: '4.8x', label: 'Faster CAPA Resolution Speed' },
     ],
-    standards: ['ISO 9001:2015', 'ISO 22000:2018', 'airSlate Integration'],
+    standards: ['ISO 9001:2015', 'ISO 22000:2018', 'PECB Accredited Auditor Protocols'],
     testimonial: {
       quote:
         'Quality Centre Limited did not just help us pass our ISO audit—they eradicated our paperwork nightmare and created a digital culture that our shop-floor managers love using every single shift.',

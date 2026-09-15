@@ -42,6 +42,9 @@ export interface TechPartner {
   features: string[];
   logoSvg: string;
   bestFor: string;
+  agreementUrl?: string;
+  websiteUrl?: string;
+  badge?: string;
 }
 
 export interface ApproachStep {

@@ -64,7 +64,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenConsultation }) => {
       options: [
         { text: 'Paper binders & local Word docs with manual signatures', score: 1 },
         { text: 'Shared Google Drive/Dropbox folders with some digital versions', score: 2 },
-        { text: 'Dedicated digital workflow system (e.g. SoftExpert/airSlate) with automated audit logs', score: 3 },
+        { text: 'Dedicated digital workflow system (e.g. SoftExpert/PECB frameworks) with automated audit logs', score: 3 },
       ],
     },
     {
@@ -565,7 +565,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenConsultation }) => {
                             : 'border-slate-200 text-slate-500'
                         }`}
                       >
-                        <span>Pre-configured SoftExpert EQM & airSlate templates ready</span>
+                        <span>Pre-configured SoftExpert EQM & PECB audit templates ready</span>
                         <span className="text-cyan-500 font-semibold">100% External Audit Guarantee</span>
                       </div>
                     </motion.div>
@@ -1172,8 +1172,8 @@ export const Services: React.FC<ServicesProps> = ({ onOpenConsultation }) => {
                         isDark ? 'text-slate-300' : 'text-slate-600'
                       }`}
                     >
-                      Based on your responses, migrating your management procedures to SoftExpert & airSlate
-                      workflows will likely reduce audit preparation time by 60%+ and eliminate recurrent compliance penalties.
+                      Based on your responses, migrating your management procedures to SoftExpert & PECB
+                      audit protocols will likely reduce audit preparation time by 60%+ and eliminate recurrent compliance penalties.
                     </p>
                   </div>
 

@@ -53,7 +53,7 @@ export const ComplianceTelemetry: React.FC<ComplianceTelemetryProps> = ({
       clauseStatus: [
         { clause: 'Clause 4: Organizational Context & Stakeholder Matrix', status: 'Compliant & Digitized', pct: 100 },
         { clause: 'Clause 6: Risk & Opportunity Matrix Scoring', status: 'Automated Real-Time Matrix', pct: 96 },
-        { clause: 'Clause 8: Operations, Traceability & Quality Gates', status: 'airSlate Lot & Batch Barcode Verified', pct: 100 },
+        { clause: 'Clause 8: Operations, Traceability & Quality Gates', status: 'PECB Lead Auditor Inspected & Verified', pct: 100 },
         { clause: 'Clause 9: Performance Evaluation & Internal Audit', status: 'SoftExpert EQM Synced Audit Pack', pct: 97 },
         { clause: 'Clause 10: Corrective Action (CAPA) Resolution', status: 'Zero Overdue CAPAs', pct: 99 },
       ],
@@ -286,7 +286,7 @@ export const ComplianceTelemetry: React.FC<ComplianceTelemetryProps> = ({
                 Live Clause Verification Matrix (Clauses 4 through 10)
               </span>
               <span className="text-[11px] font-mono text-[#00A9CF] font-semibold">
-                SoftExpert Suite & airSlate Active
+                SoftExpert Suite & PECB Active
               </span>
             </div>
 

@@ -197,11 +197,11 @@ export const Hero: React.FC<HeroProps> = ({
           </div>
 
           <div className="text-center">
-            <div className="text-2xl sm:text-3xl font-black text-emerald-500 font-mono flex items-center justify-center gap-1">
-              <span>airSlate</span>
+            <div className="text-2xl sm:text-3xl font-black text-amber-500 font-mono flex items-center justify-center gap-1">
+              <span>PECB</span>
             </div>
             <div className={`text-xs font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Workflow Automation
+              Authorized Agreement
             </div>
           </div>
         </motion.div>

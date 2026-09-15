@@ -49,7 +49,7 @@ const CHAPTERS: Chapter[] = [
     time: 45,
     timestamp: '00:45',
     title: 'The Quality Centre Digital OS',
-    summary: 'Bridging international standards (ISO 9001, 27001, ESG) with SoftExpert and airSlate workflow engines.',
+    summary: 'Bridging international standards (ISO 9001, 27001, ESG) with SoftExpert software and official PECB certification frameworks.',
     keyMetric: '60% faster SOP deployment',
   },
   {
@@ -573,7 +573,7 @@ export const VideoExplainer: React.FC<VideoExplainerProps> = ({ onOpenConsultati
                         <span>40% Admin Time Reclaimed</span>
                       </div>
                       <p className={`text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                        airSlate automated routing eliminates paper binders, physical signatures, and manual CAPA escalation delays.
+                        PECB accredited auditor frameworks and SoftExpert automation eliminate paper binders, physical signatures, and manual CAPA escalation delays.
                       </p>
                     </div>
 
@@ -614,7 +614,7 @@ export const VideoExplainer: React.FC<VideoExplainerProps> = ({ onOpenConsultati
                   <div className={`p-2.5 rounded-lg ${isDark ? 'bg-slate-900/80' : 'bg-slate-100'}`}>
                     <span className="font-mono font-bold text-cyan-500">[01:30]</span>{' '}
                     <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
-                      "Through airSlate and SoftExpert, non-conformities automatically trigger root-cause analysis. Evidence compiles in real time without human chasing."
+                      "Through our PECB partnership and SoftExpert platforms, non-conformities automatically trigger root-cause analysis. Evidence compiles in real time according to accredited standards."
                     </span>
                   </div>
 
@@ -649,12 +649,12 @@ export const VideoExplainer: React.FC<VideoExplainerProps> = ({ onOpenConsultati
                       isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-50 border-slate-200'
                     }`}
                   >
-                    <div className="font-bold text-[#00A9CF] flex items-center justify-between">
-                      <span>airSlate Business Cloud</span>
-                      <span className="text-[10px] font-mono text-slate-400">Workflow Automation</span>
+                    <div className="font-bold text-amber-500 flex items-center justify-between">
+                      <span>PECB Authorized Partner</span>
+                      <span className="text-[10px] font-mono text-slate-400">Official Agreement</span>
                     </div>
                     <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
-                      No-code process automation, e-signatures, mobile checklist capture, and audit trail generation.
+                      Accredited training courses, internationally recognized lead auditor certifications (ISO 9001, 27001, 14001, 45001), and global examination services.
                     </p>
                   </div>
 

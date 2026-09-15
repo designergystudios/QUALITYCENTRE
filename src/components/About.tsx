@@ -25,7 +25,7 @@ interface AboutProps {
 
 export const About: React.FC<AboutProps> = ({ onOpenConsultation }) => {
   const { isDark } = useTheme();
-  const [selectedPartner, setSelectedPartner] = useState<'SoftExpert' | 'airSlate'>('SoftExpert');
+  const [selectedPartner, setSelectedPartner] = useState<'SoftExpert' | 'PECB'>('SoftExpert');
 
   return (
     <section
@@ -208,7 +208,7 @@ export const About: React.FC<AboutProps> = ({ onOpenConsultation }) => {
           ))}
         </div>
 
-        {/* Technology Partners Section (SoftExpert & airSlate) */}
+        {/* Technology Partners Section (SoftExpert & PECB) */}
         <div className="space-y-8 pt-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
@@ -283,10 +283,10 @@ export const About: React.FC<AboutProps> = ({ onOpenConsultation }) => {
                   <div className="flex items-center justify-between gap-4 mb-5">
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg text-slate-900 shadow-md"
+                        className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm sm:text-base text-slate-900 shadow-md"
                         style={{ backgroundColor: partner.accentColor }}
                       >
-                        {partner.name === 'SoftExpert' ? 'SE' : 'aS'}
+                        {partner.name === 'SoftExpert' ? 'SE' : 'PECB'}
                       </div>
                       <div>
                         <div
@@ -297,12 +297,14 @@ export const About: React.FC<AboutProps> = ({ onOpenConsultation }) => {
                           <span>{partner.name}</span>
                           <span
                             className={`text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full border ${
-                              isDark
+                              partner.name === 'PECB'
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                : isDark
                                 ? 'bg-slate-800 text-cyan-300 border-slate-700'
                                 : 'bg-cyan-50 text-cyan-800 border-cyan-200'
                             }`}
                           >
-                            Authorized Partner
+                            {partner.name === 'PECB' ? 'Official Agreement' : 'Authorized Partner'}
                           </span>
                         </div>
                         <div
@@ -315,20 +317,39 @@ export const About: React.FC<AboutProps> = ({ onOpenConsultation }) => {
                       </div>
                     </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenConsultation(`${partner.name} Implementation`);
-                      }}
-                      className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                        isDark
-                          ? 'text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border-slate-700'
-                          : 'text-slate-800 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border-slate-300'
-                      }`}
-                    >
-                      <span>Deploy</span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {partner.agreementUrl && (
+                        <a
+                          href={partner.agreementUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                            isDark
+                              ? 'text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30'
+                              : 'text-amber-900 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 border-amber-300'
+                          }`}
+                          title="Read official PECB press release"
+                        >
+                          <span>Partnership Notice</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenConsultation(`${partner.name} ${partner.name === 'PECB' ? 'Certification & Training' : 'Implementation'}`);
+                        }}
+                        className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                          isDark
+                            ? 'text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border-slate-700'
+                            : 'text-slate-800 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border-slate-300'
+                        }`}
+                      >
+                        <span>{partner.name === 'PECB' ? 'Enroll / Inquire' : 'Deploy'}</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   <p
@@ -383,22 +404,42 @@ export const About: React.FC<AboutProps> = ({ onOpenConsultation }) => {
                   </div>
 
                   <div
-                    className={`mt-6 pt-5 border-t flex items-center justify-between ${
+                    className={`mt-6 pt-5 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                       isDark ? 'border-slate-800' : 'border-slate-200'
                     }`}
                   >
-                    <span
-                      className={`text-xs font-mono ${
-                        isDark ? 'text-slate-400' : 'text-slate-500'
-                      }`}
-                    >
-                      Integrated into Quality Centre Digital Operating System
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`text-xs font-mono ${
+                          isDark ? 'text-slate-400' : 'text-slate-500'
+                        }`}
+                      >
+                        {partner.name === 'PECB'
+                          ? 'Accredited Training & International Certification Agreement'
+                          : 'Integrated into Quality Centre Digital Operating System'}
+                      </span>
+                      {partner.websiteUrl && (
+                        <a
+                          href={partner.websiteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-xs font-mono text-amber-500 hover:underline"
+                        >
+                          <span>pecb.com</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
                     <button
-                      onClick={() => onOpenConsultation(`${partner.name} Integration`)}
+                      onClick={() =>
+                        onOpenConsultation(
+                          partner.name === 'PECB' ? 'PECB Training & Certification' : `${partner.name} Integration`
+                        )
+                      }
                       className="text-xs font-bold text-cyan-500 hover:text-cyan-600 flex items-center gap-1"
                     >
-                      Request Architecture Demo &rarr;
+                      {partner.name === 'PECB' ? 'Explore PECB Courses &rarr;' : 'Request Architecture Demo &rarr;'}
                     </button>
                   </div>
                 </motion.div>

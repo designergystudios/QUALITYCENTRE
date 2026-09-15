@@ -26,7 +26,7 @@
       {
         "value": "65%",
         "label": "Audit Prep Time Cut",
-        "desc": "Through automated SoftExpert & airSlate workflows"
+        "desc": "Through automated SoftExpert workflows & PECB audit frameworks"
       }
     ],
     "logoType": "custom",
@@ -137,7 +137,7 @@
       "id": "media-1",
       "type": "image",
       "title": "Modern ISO & Digital GRC Architecture Infographic",
-      "description": "Executive system diagram illustrating the convergence of SoftExpert QMS, airSlate automation, and ISO 9001/27001/14001 compliance telemetry.",
+      "description": "Executive system diagram illustrating the convergence of SoftExpert QMS, PECB certification standards, and ISO 9001/27001/14001 compliance telemetry.",
       "category": "infographic",
       "mediaUrl": "/src/assets/images/hero_infographic_1789451412328.jpg",
       "thumbnailUrl": "/src/assets/images/hero_infographic_1789451412328.jpg",
