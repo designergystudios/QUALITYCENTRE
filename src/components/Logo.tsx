@@ -19,20 +19,20 @@ export const Logo: React.FC<LogoProps> = ({
   const { companyConfig } = useCms();
 
   const heights = {
-    sm: 'h-8',
-    md: 'h-10',
-    lg: 'h-12',
-    xl: 'h-16',
+    sm: 'h-14',
+    md: 'h-20',
+    lg: 'h-24 md:h-28',
+    xl: 'h-36',
   };
 
-  // If custom uploaded logo is configured
-  if (companyConfig.logoType === 'custom' && companyConfig.logoUrl) {
+  // If custom uploaded logo is configured or provided
+  if (companyConfig.logoUrl) {
     return (
       <div className={`inline-flex items-center select-none ${heights[size]} ${className}`}>
         <img
           src={companyConfig.logoUrl}
-          alt={companyConfig.name || 'Logo'}
-          className={`${heights[size]} w-auto object-contain`}
+          alt={companyConfig.name || 'Quality Centre Logo'}
+          className="h-full w-auto max-h-full object-contain"
           referrerPolicy="no-referrer"
         />
       </div>

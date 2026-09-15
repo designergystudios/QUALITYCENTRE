@@ -60,7 +60,7 @@ export const Footer: React.FC<FooterProps> = ({
           
           {/* Col 1 & 2: Brand & Mission */}
           <div className="lg:col-span-2 space-y-4">
-            <Logo className="h-11" />
+            <Logo size="lg" className="h-20 sm:h-24 md:h-26" />
             <p className={`leading-relaxed max-w-sm text-xs ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               {COMPANY_DETAILS.tagline}
             </p>

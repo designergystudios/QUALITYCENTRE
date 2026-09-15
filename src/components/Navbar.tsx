@@ -82,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               handleLinkClick('#home');
             }}
           >
-            <Logo className="h-11" />
+            <Logo size="lg" className="h-20 sm:h-24 md:h-26" />
           </a>
 
           {/* Desktop Navigation Links */}

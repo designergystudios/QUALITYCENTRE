@@ -288,12 +288,14 @@ export const AdminBackend: React.FC = () => {
         }));
         showToast('Hero background infographic image uploaded!');
       } else if (target === 'logo') {
-        setCompanyDraft((prev) => ({
-          ...prev,
+        const updatedConfig = {
+          ...companyDraft,
           logoUrl: dataUrl,
-          logoType: 'custom',
-        }));
-        showToast('Custom logo uploaded successfully! Click Save Company Info to persist.');
+          logoType: 'custom' as const,
+        };
+        setCompanyDraft(updatedConfig);
+        updateCompanyConfig(updatedConfig);
+        showToast('Site logo uploaded and applied across the website!');
       }
     };
     reader.onerror = () => {

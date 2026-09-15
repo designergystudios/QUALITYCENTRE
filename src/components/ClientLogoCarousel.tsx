@@ -44,26 +44,26 @@ export const ClientLogoCarousel: React.FC = () => {
           isDark ? 'from-slate-950 to-transparent' : 'from-slate-100 to-transparent'
         }`} />
 
-        <div className="flex items-center gap-8 sm:gap-12 animate-marquee py-6 px-4 whitespace-nowrap overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-4 sm:gap-5 animate-marquee py-6 px-4 whitespace-nowrap overflow-x-auto no-scrollbar">
           {clientLogos.concat(clientLogos).map((client, idx) => (
             <div
               key={`${client.id}-${idx}`}
-              className={`flex items-center gap-4 px-8 py-6 rounded-2xl border transition-all duration-300 flex-shrink-0 group hover:-translate-y-1 shadow-md ${
+              className={`flex items-center gap-3.5 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl border transition-all duration-300 flex-shrink-0 group hover:-translate-y-1 shadow-md ${
                 isDark
-                  ? 'bg-slate-900/80 border-slate-800 hover:border-[#00A9CF]/60 hover:bg-slate-900'
+                  ? 'bg-slate-900/90 border-slate-800 hover:border-[#00A9CF]/60 hover:bg-slate-900'
                   : 'bg-white border-slate-200 hover:border-[#00A9CF]/60 hover:shadow-lg'
               }`}
             >
-              <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border-2 border-slate-200 dark:border-slate-700 shadow-inner">
+              <div className="w-22 h-22 sm:w-24 sm:h-24 md:w-26 md:h-26 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border-2 border-slate-200 dark:border-slate-700 shadow-inner p-1.5">
                 <img
                   src={client.logoUrl}
                   alt={client.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <div className="text-left">
-                <h5 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-[#00A9CF] transition-colors">
+              <div className="text-left pr-1">
+                <h5 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-[#00A9CF] transition-colors">
                   {client.name}
                 </h5>
                 {client.industry && (
