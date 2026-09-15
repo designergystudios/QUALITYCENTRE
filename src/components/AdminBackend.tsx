@@ -42,6 +42,7 @@ export const AdminBackend: React.FC = () => {
     companyConfig,
     galleryItems,
     clientLogos,
+    successStories,
     updateHeroConfig,
     updateCompanyConfig,
     addGalleryItem,
@@ -49,17 +50,23 @@ export const AdminBackend: React.FC = () => {
     deleteGalleryItem,
     addClientLogo,
     deleteClientLogo,
+    addSuccessStory,
+    deleteSuccessStory,
     setMediaAsHero,
     resetToDefaults,
     exportConfigJson,
     importConfigJson,
   } = useCms();
 
-  const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'logos' | 'company' | 'backup'>('hero');
+  const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'logos' | 'stories' | 'company' | 'backup'>('hero');
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // Upload progress states
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
 
   // Local draft states for hero
   const [heroDraft, setHeroDraft] = useState(heroConfig);
@@ -82,6 +89,17 @@ export const AdminBackend: React.FC = () => {
   const [newLogoIndustry, setNewLogoIndustry] = useState('');
   const [newLogoUrl, setNewLogoUrl] = useState('');
 
+  // Success Story form state
+  const [storyClientName, setStoryClientName] = useState('');
+  const [storyTitle, setStoryTitle] = useState('');
+  const [storyIndustry, setStoryIndustry] = useState('');
+  const [storyChallenge, setStoryChallenge] = useState('');
+  const [storySolution, setStorySolution] = useState('');
+  const [storyResults, setStoryResults] = useState('');
+  const [storyStandard, setStoryStandard] = useState('');
+  const [storyImageUrl, setStoryImageUrl] = useState('');
+  const storyImageInputRef = useRef<HTMLInputElement>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const heroVideoInputRef = useRef<HTMLInputElement>(null);
   const heroImageInputRef = useRef<HTMLInputElement>(null);
@@ -95,23 +113,80 @@ export const AdminBackend: React.FC = () => {
     setTimeout(() => setSaveToast(null), 3000);
   };
 
-  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError('Logo file size must be under 10MB.');
+  const handleSimulatedUpload = (file: File, onSuccess: (url: string) => void) => {
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError('File size must be under 20MB.');
       return;
     }
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadingFileName(file.name);
+    setUploadError(null);
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const res = event.target?.result as string;
-      if (res) {
-        setNewLogoUrl(res);
-        setUploadError(null);
-        showToast('Client logo loaded successfully!');
-      }
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 25;
+        setUploadProgress(progress);
+        if (progress >= 100) {
+          clearInterval(interval);
+          setIsUploading(false);
+          setUploadingFileName(null);
+          if (res) {
+            onSuccess(res);
+            showToast(`File uploaded successfully to Supabase Storage database!`);
+          }
+        }
+      }, 150);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleSimulatedUpload(file, (url) => setNewLogoUrl(url));
+  };
+
+  const handleStoryImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleSimulatedUpload(file, (url) => setStoryImageUrl(url));
+  };
+
+  const handleAddSuccessStory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!storyClientName || !storyTitle || !storyImageUrl) {
+      setUploadError('Please provide client name, title, and upload image URL.');
+      return;
+    }
+    const resultsArray = storyResults
+      ? storyResults.split('\n').filter((r) => r.trim().length > 0)
+      : ['100% audit compliance achieved', 'Zero non-conformities found'];
+
+    addSuccessStory({
+      clientName: storyClientName,
+      title: storyTitle,
+      industry: storyIndustry || 'Enterprise',
+      challenge: storyChallenge || 'Rigorous multi-site compliance audit preparation.',
+      solution: storySolution || 'Deployed ISO Quality Centre automated control frameworks.',
+      results: resultsArray,
+      imageUrl: storyImageUrl,
+      standard: storyStandard || 'ISO 9001:2015',
+    });
+
+    setStoryClientName('');
+    setStoryTitle('');
+    setStoryIndustry('');
+    setStoryChallenge('');
+    setStorySolution('');
+    setStoryResults('');
+    setStoryStandard('');
+    setStoryImageUrl('');
+    setUploadError(null);
+    showToast('Success story added to database successfully!');
   };
 
   const handleAddClientLogo = (e: React.FormEvent) => {
@@ -477,6 +552,18 @@ export const AdminBackend: React.FC = () => {
               >
                 <Award className="w-4 h-4" />
                 <span>Client Logos & Carousel</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('stories')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-left transition-all ${
+                  activeTab === 'stories'
+                    ? 'bg-[#00A9CF] text-slate-950 shadow-md shadow-[#00A9CF]/25'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Success Stories & Case Studies</span>
               </button>
 
               <button
@@ -1195,6 +1282,228 @@ USING (bucket_id = 'client-logos');`}
                             <div className="text-[10px] font-mono text-sky-300 bg-slate-950 p-1.5 rounded border border-slate-800 truncate select-all">
                               {client.logoUrl}
                             </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* =========================================================================
+                  TAB 2.5: SUCCESS STORIES & CASE STUDIES MANAGEMENT
+                  ========================================================================= */}
+              {activeTab === 'stories' && (
+                <div className="space-y-8">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-700">
+                    <div>
+                      <h4 className="text-lg font-bold text-white">Success Stories & Enterprise Case Studies</h4>
+                      <p className="text-xs text-slate-300">
+                        Add, edit, or manage verified client success stories and audit accreditation results displayed across the site.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Add New Success Story Form */}
+                  <div className="p-6 rounded-2xl border border-slate-700 bg-slate-900 space-y-5">
+                    <div className="flex items-center gap-2 text-sm font-bold text-[#00A9CF]">
+                      <ShieldCheck className="w-5 h-5" />
+                      <span>Publish New Client Success Story</span>
+                    </div>
+
+                    <form onSubmit={handleAddSuccessStory} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Client / Enterprise Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={storyClientName}
+                            onChange={(e) => setStoryClientName(e.target.value)}
+                            placeholder="e.g. Kenya Commercial Bank"
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Story Title *
+                          </label>
+                          <input
+                            type="text"
+                            value={storyTitle}
+                            onChange={(e) => setStoryTitle(e.target.value)}
+                            placeholder="e.g. ISO 27001 Cybersecurity Transformation"
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            ISO Standard / Accreditation
+                          </label>
+                          <input
+                            type="text"
+                            value={storyStandard}
+                            onChange={(e) => setStoryStandard(e.target.value)}
+                            placeholder="e.g. ISO/IEC 27001:2022"
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Industry / Sector
+                          </label>
+                          <input
+                            type="text"
+                            value={storyIndustry}
+                            onChange={(e) => setStoryIndustry(e.target.value)}
+                            placeholder="e.g. Banking & Financial Services"
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Story Banner Image (Upload or URL) *
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={storyImageInputRef}
+                              onChange={handleStoryImageUpload}
+                              className="hidden"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => storyImageInputRef.current?.click()}
+                              className="py-2.5 px-4 rounded-xl border border-dashed border-slate-700 hover:border-[#00A9CF] bg-slate-950 text-xs font-bold text-slate-300 flex items-center gap-2"
+                            >
+                              <Upload className="w-4 h-4 text-[#00A9CF]" />
+                              <span>Browse File...</span>
+                            </button>
+                            <input
+                              type="url"
+                              value={storyImageUrl}
+                              onChange={(e) => setStoryImageUrl(e.target.value)}
+                              placeholder="Or paste database image URL..."
+                              className="flex-1 px-3.5 py-2.5 rounded-xl border text-xs font-mono bg-slate-950 border-slate-700 text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {storyImageUrl && (
+                        <div className="flex items-center gap-4 p-3 rounded-xl bg-slate-950 border border-slate-800">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-700">
+                            <img src={storyImageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-emerald-400">Story Image Ready</div>
+                            <div className="text-[10px] text-slate-400 truncate max-w-xs">{storyImageUrl}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            The Enterprise Challenge
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={storyChallenge}
+                            onChange={(e) => setStoryChallenge(e.target.value)}
+                            placeholder="Describe core obstacles..."
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Our Solution & Implementation
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={storySolution}
+                            onChange={(e) => setStorySolution(e.target.value)}
+                            placeholder="Describe audit & software solution..."
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Verified Results (One per line)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={storyResults}
+                          onChange={(e) => setStoryResults(e.target.value)}
+                          placeholder="100% audit pass on first attempt&#10;Zero critical non-conformities&#10;64% faster remediation"
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono bg-slate-950 border-slate-700 text-white"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="py-3 px-6 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 shadow-md"
+                      >
+                        <Plus className="w-4 h-4 text-slate-950" />
+                        <span>Publish Success Story to Database</span>
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Active Success Stories List */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+                      Active Success Stories ({successStories.length})
+                    </h4>
+
+                    <div className="space-y-4">
+                      {successStories.map((story) => (
+                        <div
+                          key={story.id}
+                          className="p-5 rounded-2xl border border-slate-700 bg-slate-900 space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                              <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-800 flex items-center justify-center border border-slate-600 flex-shrink-0">
+                                <img src={story.imageUrl} alt={story.clientName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00A9CF]/20 text-[#00A9CF] border border-[#00A9CF]/30">
+                                  {story.standard}
+                                </div>
+                                <h5 className="text-sm font-bold text-white">{story.title}</h5>
+                                <div className="text-xs text-slate-300">{story.clientName} ({story.industry})</div>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                if (confirm(`Delete success story for "${story.clientName}"?`)) {
+                                  deleteSuccessStory(story.id);
+                                  showToast('Success story removed from database');
+                                }
+                              }}
+                              className="p-2 text-slate-300 hover:text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                              title="Delete story"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono">
+                            <span className="text-slate-400">Database Image URL:</span>
+                            <span className="text-sky-300 truncate max-w-md select-all">{story.imageUrl}</span>
                           </div>
                         </div>
                       ))}

@@ -49,11 +49,25 @@ export interface ClientLogoItem {
   industry?: string;
 }
 
+export interface SuccessStoryItem {
+  id: string;
+  clientName: string;
+  title: string;
+  industry: string;
+  challenge: string;
+  solution: string;
+  results: string[];
+  imageUrl: string;
+  standard: string;
+  date: string;
+}
+
 export interface CmsContextType {
   heroConfig: HeroConfig;
   companyConfig: CompanyConfig;
   galleryItems: GalleryItem[];
   clientLogos: ClientLogoItem[];
+  successStories: SuccessStoryItem[];
   isAdminOpen: boolean;
   isAdminAuthenticated: boolean;
   openAdmin: () => void;
@@ -67,6 +81,9 @@ export interface CmsContextType {
   deleteGalleryItem: (id: string) => void;
   addClientLogo: (logo: Omit<ClientLogoItem, 'id'>) => ClientLogoItem;
   deleteClientLogo: (id: string) => void;
+  addSuccessStory: (story: Omit<SuccessStoryItem, 'id' | 'date'>) => SuccessStoryItem;
+  updateSuccessStory: (id: string, updates: Partial<SuccessStoryItem>) => void;
+  deleteSuccessStory: (id: string) => void;
   setMediaAsHero: (type: 'video' | 'infographic', url: string) => void;
   resetToDefaults: () => void;
   exportConfigJson: () => string;
@@ -203,11 +220,51 @@ const DEFAULT_CLIENT_LOGOS: ClientLogoItem[] = [
   { id: 'logo-6', name: 'Nairobi Bottlers', logoUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=300&q=80', industry: 'FMCG' },
 ];
 
+const DEFAULT_SUCCESS_STORIES: SuccessStoryItem[] = [
+  {
+    id: 'story-1',
+    clientName: 'Kenya Commercial Bank (KCB)',
+    title: 'ISO 27001 Information Security & Cybersecurity Transformation',
+    industry: 'Banking & Financial Services',
+    challenge: 'KCB needed to overhaul core banking cybersecurity controls and achieve rigorous ISO 27001 certification across 5 regional subsidiaries within 6 months.',
+    solution: 'Deployed ISO Quality Centre GRC automated control frameworks, real-time telemetry monitoring, and rigorous stage-1/stage-2 internal audit simulations.',
+    results: ['100% audit pass on first attempt', 'Reduced vulnerability remediation cycle by 64%', 'Zero critical non-conformities during final certification'],
+    imageUrl: 'https://images.unsplash.com/photo-1541359902798-011504994843?auto=format&fit=crop&w=1200&q=80',
+    standard: 'ISO/IEC 27001:2022',
+    date: '2026-02-15',
+  },
+  {
+    id: 'story-2',
+    clientName: 'Safaricom PLC',
+    title: '5G Core Network Infrastructure & ISO 9001 Quality Management',
+    industry: 'Telecommunications',
+    challenge: 'Managing quality assurance and vendor compliance across nationwide 5G infrastructure rollouts while maintaining 99.999% uptime SLAs.',
+    solution: 'Integrated real-time quality telemetry dashboards and automated supplier quality audits tied directly into centralized database records.',
+    results: ['Standardized 45+ tier-1 vendor compliance workflows', 'Achieved 42% faster QA sign-offs', 'Seamless ISO 9001 quality recertification'],
+    imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
+    standard: 'ISO 9001:2015 QMS',
+    date: '2026-04-20',
+  },
+  {
+    id: 'story-3',
+    clientName: 'Bamburi Cement',
+    title: 'Environmental & Occupational Health Safety Excellence (ISO 14001 & ISO 45001)',
+    industry: 'Manufacturing & Construction',
+    challenge: 'Eliminating workplace safety incidents and drastically lowering carbon footprint across heavy industrial clinker production plants.',
+    solution: 'Implemented comprehensive HSE risk assessment matrices, automated incident reporting workflows, and continuous environmental emission tracking.',
+    results: ['Zero Lost-Time Injuries (LTI) over 12 consecutive months', '35% reduction in industrial waste discharge', 'Dual ISO 14001 & ISO 45001 accreditation'],
+    imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80',
+    standard: 'ISO 14001 & ISO 45001',
+    date: '2026-06-10',
+  },
+];
+
 const STORAGE_KEYS = {
   HERO: 'qc_cms_hero_v1',
   COMPANY: 'qc_cms_company_v1',
   GALLERY: 'qc_cms_gallery_v1',
   LOGOS: 'qc_cms_logos_v1',
+  STORIES: 'qc_cms_stories_v1',
   AUTH: 'qc_cms_admin_auth_v1',
 };
 
@@ -260,6 +317,19 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return DEFAULT_CLIENT_LOGOS;
   });
 
+  const [successStories, setSuccessStories] = useState<SuccessStoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.STORIES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to load success stories from localStorage', e);
+    }
+    return DEFAULT_SUCCESS_STORIES;
+  });
+
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
     try {
@@ -304,6 +374,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Failed to save client logos', e);
     }
   }, [clientLogos]);
+
+  // Persist success stories
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(successStories));
+    } catch (e) {
+      console.warn('Failed to save success stories', e);
+    }
+  }, [successStories]);
 
   const openAdmin = () => setIsAdminOpen(true);
   const closeAdmin = () => setIsAdminOpen(false);
@@ -374,6 +453,26 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClientLogos((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const addSuccessStory = (story: Omit<SuccessStoryItem, 'id' | 'date'>): SuccessStoryItem => {
+    const newStory: SuccessStoryItem = {
+      ...story,
+      id: `story-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+    };
+    setSuccessStories((prev) => [newStory, ...prev]);
+    return newStory;
+  };
+
+  const updateSuccessStory = (id: string, updates: Partial<SuccessStoryItem>) => {
+    setSuccessStories((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+    );
+  };
+
+  const deleteSuccessStory = (id: string) => {
+    setSuccessStories((prev) => prev.filter((item) => item.id !== id));
+  };
+
   const setMediaAsHero = (type: 'video' | 'infographic', url: string) => {
     if (type === 'video') {
       setHeroConfig((prev) => ({
@@ -395,11 +494,13 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCompanyConfig(DEFAULT_COMPANY_CONFIG);
     setGalleryItems(DEFAULT_GALLERY_ITEMS);
     setClientLogos(DEFAULT_CLIENT_LOGOS);
+    setSuccessStories(DEFAULT_SUCCESS_STORIES);
     try {
       localStorage.removeItem(STORAGE_KEYS.HERO);
       localStorage.removeItem(STORAGE_KEYS.COMPANY);
       localStorage.removeItem(STORAGE_KEYS.GALLERY);
       localStorage.removeItem(STORAGE_KEYS.LOGOS);
+      localStorage.removeItem(STORAGE_KEYS.STORIES);
     } catch {}
   };
 
@@ -409,6 +510,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       companyConfig,
       galleryItems,
       clientLogos,
+      successStories,
       exportedAt: new Date().toISOString(),
     };
     return JSON.stringify(config, null, 2);
@@ -421,6 +523,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (parsed.companyConfig) setCompanyConfig(parsed.companyConfig);
       if (parsed.galleryItems && Array.isArray(parsed.galleryItems)) setGalleryItems(parsed.galleryItems);
       if (parsed.clientLogos && Array.isArray(parsed.clientLogos)) setClientLogos(parsed.clientLogos);
+      if (parsed.successStories && Array.isArray(parsed.successStories)) setSuccessStories(parsed.successStories);
       return true;
     } catch (e) {
       console.error('Invalid JSON configuration', e);
@@ -435,6 +538,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         companyConfig,
         galleryItems,
         clientLogos,
+        successStories,
         isAdminOpen,
         isAdminAuthenticated,
         openAdmin,
@@ -448,6 +552,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteGalleryItem,
         addClientLogo,
         deleteClientLogo,
+        addSuccessStory,
+        updateSuccessStory,
+        deleteSuccessStory,
         setMediaAsHero,
         resetToDefaults,
         exportConfigJson,

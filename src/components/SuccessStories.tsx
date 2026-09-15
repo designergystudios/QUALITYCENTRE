@@ -1,329 +1,177 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import {
-  Award,
-  Building2,
-  MapPin,
-  Quote,
-  TrendingUp,
-  CheckCircle2,
-  ShieldCheck,
-  ChevronRight,
-} from 'lucide-react';
+import { useCms } from '../context/CmsContext';
 import { useTheme } from '../context/ThemeContext';
-import { AfroPattern } from './AfroPattern';
-import { CASE_STUDIES } from '../data/content';
-import { CaseStudy } from '../types';
+import { Award, CheckCircle2, Building2, FileText, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 
-interface SuccessStoriesProps {
-  onOpenConsultation: (clientType?: string) => void;
-}
-
-export const SuccessStories: React.FC<SuccessStoriesProps> = ({
-  onOpenConsultation,
-}) => {
+export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => void }> = ({ onOpenConsultation }) => {
+  const { successStories } = useCms();
   const { isDark } = useTheme();
-  const [activeStory, setActiveStory] = useState<CaseStudy>(CASE_STUDIES[0]);
+  const [selectedStoryId, setSelectedStoryId] = useState<string>(successStories[0]?.id || '');
+
+  if (!successStories || successStories.length === 0) return null;
+
+  const currentStory = successStories.find((s) => s.id === selectedStoryId) || successStories[0];
 
   return (
-    <section
-      id="success-stories"
-      className={`relative py-24 overflow-hidden border-t transition-colors duration-300 ${
-        isDark ? 'bg-[#0B0F19] border-slate-800/80' : 'bg-slate-50 border-slate-200'
-      }`}
-    >
-      <AfroPattern
-        variant="chevrons"
-        opacity={isDark ? 0.06 : 0.03}
-        className="inset-0 pointer-events-none"
-      />
-      <div
-        className={`absolute bottom-10 left-1/4 w-96 h-96 rounded-full blur-[140px] pointer-events-none ${
-          isDark ? 'bg-cyan-500/10' : 'bg-cyan-500/15'
-        }`}
-      />
+    <section id="success-stories" className={`py-24 relative overflow-hidden transition-colors duration-300 ${
+      isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
+    }`}>
+      {/* Background Glow Accents */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#00A9CF]/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
-        
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${
-              isDark
-                ? 'bg-cyan-500/10 border-cyan-500/25 text-cyan-400'
-                : 'bg-cyan-50 border-cyan-300 text-cyan-800'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" />
-            <span>PROVEN ENTERPRISE IMPACT ACROSS AFRICA</span>
+        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#00A9CF]/15 text-[#00A9CF] border border-[#00A9CF]/30 shadow-sm">
+            <Sparkles className="w-4 h-4" />
+            <span>Proven Enterprise Impact & Case Studies</span>
           </div>
-          <h2
-            className={`text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight transition-colors ${
-              isDark ? 'text-white' : 'text-slate-900'
-            }`}
-          >
-            Transforming Industry Leaders into{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-sky-500 to-amber-500">
-              Audit-Proof Powerhouses
-            </span>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight">
+            Client Success Stories & <span className="text-[#00A9CF]">Accreditation Results</span>
           </h2>
-          <p
-            className={`text-base sm:text-lg leading-relaxed transition-colors ${
-              isDark ? 'text-slate-300' : 'text-slate-600'
-            }`}
-          >
-            Real outcomes from leading manufacturing plants, financial institutions, and agricultural exporters
-            powered by Quality Centre Limited.
+          <p className={`text-base sm:text-lg ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            Explore how East Africa’s premier banks, telecommunications giants, and manufacturers achieved 100% compliance and audit excellence.
           </p>
         </div>
 
-        {/* Stories Tabs & Active Case Showcase */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left: Case Studies List */}
-          <div className="lg:col-span-4 space-y-3">
-            <div
-              className={`text-xs font-mono uppercase font-bold px-1 ${
-                isDark ? 'text-slate-400' : 'text-slate-600'
-              }`}
-            >
-              Select Case Study:
-            </div>
-
-            {CASE_STUDIES.map((study) => {
-              const isSelected = activeStory.id === study.id;
-              return (
-                <button
-                  key={study.id}
-                  onClick={() => setActiveStory(study)}
-                  className={`w-full text-left p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden ${
-                    isSelected
-                      ? isDark
-                        ? 'bg-slate-900/95 border-cyan-400 shadow-[0_10px_30px_rgba(0,180,216,0.2)]'
-                        : 'bg-white border-cyan-500 shadow-md ring-1 ring-cyan-400'
-                      : isDark
-                      ? 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/40'
-                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className={`text-[11px] font-mono font-bold uppercase ${
-                        isDark ? 'text-amber-400' : 'text-amber-600'
-                      }`}
-                    >
-                      {study.industry}
-                    </span>
-                    <span
-                      className={`text-[10px] flex items-center gap-1 ${
-                        isDark ? 'text-slate-400' : 'text-slate-500'
-                      }`}
-                    >
-                      <MapPin className="w-3 h-3 text-cyan-500" />
-                      {study.location.split('(')[0]}
-                    </span>
-                  </div>
-
-                  <h3
-                    className={`text-sm sm:text-base font-bold mb-2 leading-snug transition-colors ${
-                      isDark ? 'text-white' : 'text-slate-900'
-                    }`}
-                  >
-                    {study.clientType}
-                  </h3>
-
-                  <div className="flex flex-wrap gap-1">
-                    {study.standards.map((std, idx) => (
-                      <span
-                        key={idx}
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                          isDark
-                            ? 'bg-slate-800 text-cyan-300'
-                            : 'bg-slate-100 text-cyan-800 border border-slate-200 font-medium'
-                        }`}
-                      >
-                        {std}
-                      </span>
-                    ))}
-                  </div>
-
-                  {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-400 to-amber-400" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Right: Selected Case Study Detailed Workspace */}
-          <div className="lg:col-span-8">
-            <motion.div
-              key={activeStory.id}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-              className={`rounded-2xl p-6 sm:p-9 border shadow-2xl space-y-8 relative overflow-hidden transition-colors ${
-                isDark
-                  ? 'bg-slate-900/90 border-slate-800'
-                  : 'bg-white border-slate-200 shadow-xl'
-              }`}
-            >
-              {/* Header */}
-              <div
-                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b ${
-                  isDark ? 'border-slate-800' : 'border-slate-200'
+        {/* Story Selector Tabs */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
+          {successStories.map((story) => {
+            const isSelected = story.id === currentStory.id;
+            return (
+              <button
+                key={story.id}
+                onClick={() => setSelectedStoryId(story.id)}
+                className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-300 shadow-sm ${
+                  isSelected
+                    ? 'bg-[#00A9CF] text-slate-950 shadow-lg shadow-[#00A9CF]/25 scale-105 ring-2 ring-[#00A9CF]/50'
+                    : isDark
+                    ? 'bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700 hover:text-white'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-xs font-mono text-cyan-500 font-semibold">
-                    <Building2 className="w-4 h-4" />
-                    <span>{activeStory.industry}</span>
-                    <span>•</span>
-                    <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>
-                      {activeStory.location}
-                    </span>
-                  </div>
-                  <h3
-                    className={`text-2xl sm:text-3xl font-black ${
-                      isDark ? 'text-white' : 'text-slate-900'
-                    }`}
-                  >
-                    {activeStory.clientType}
-                  </h3>
-                </div>
-
-                <button
-                  onClick={() => onOpenConsultation(`Case Study Inquiry: ${activeStory.clientType}`)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-900 bg-cyan-400 hover:bg-cyan-300 transition-colors shadow-md whitespace-nowrap"
-                >
-                  Replicate Similar Architecture
-                </button>
-              </div>
-
-              {/* Challenge & Solution Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div
-                  className={`p-5 rounded-xl border space-y-2 ${
-                    isDark
-                      ? 'bg-slate-950/70 border-slate-800'
-                      : 'bg-rose-50/50 border-rose-200'
-                  }`}
-                >
-                  <div className="text-xs font-mono uppercase text-rose-500 font-bold">
-                    The Initial Bottleneck
-                  </div>
-                  <p
-                    className={`text-xs sm:text-sm leading-relaxed ${
-                      isDark ? 'text-slate-300' : 'text-slate-700'
-                    }`}
-                  >
-                    {activeStory.challenge}
-                  </p>
-                </div>
-
-                <div
-                  className={`p-5 rounded-xl border space-y-2 ${
-                    isDark
-                      ? 'bg-slate-950/70 border-slate-800'
-                      : 'bg-cyan-50/50 border-cyan-200'
-                  }`}
-                >
-                  <div className="text-xs font-mono uppercase text-cyan-600 font-bold">
-                    The Quality Centre Solution
-                  </div>
-                  <p
-                    className={`text-xs sm:text-sm leading-relaxed ${
-                      isDark ? 'text-slate-300' : 'text-slate-700'
-                    }`}
-                  >
-                    {activeStory.solution}
-                  </p>
-                </div>
-              </div>
-
-              {/* Quantified Outcomes Strip */}
-              <div className="space-y-3">
-                <div
-                  className={`text-xs font-mono uppercase font-bold ${
-                    isDark ? 'text-amber-400' : 'text-amber-600'
-                  }`}
-                >
-                  Verifiable Operational Metrics:
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {activeStory.results.map((res, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-4 rounded-xl border text-center space-y-1 ${
-                        isDark
-                          ? 'bg-slate-950 border-slate-800/80'
-                          : 'bg-slate-50 border-slate-200 shadow-sm'
-                      }`}
-                    >
-                      <div className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-amber-500 font-mono">
-                        {res.metric}
-                      </div>
-                      <div
-                        className={`text-[11px] font-semibold ${
-                          isDark ? 'text-slate-400' : 'text-slate-600'
-                        }`}
-                      >
-                        {res.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Executive Testimonial Quote */}
-              <div
-                className={`p-6 rounded-2xl border relative ${
-                  isDark
-                    ? 'bg-gradient-to-r from-cyan-950/40 via-slate-900 to-amber-950/30 border-cyan-500/20'
-                    : 'bg-gradient-to-r from-cyan-50/60 via-slate-50 to-amber-50/60 border-cyan-200 shadow-sm'
-                }`}
-              >
-                <Quote
-                  className={`w-8 h-8 absolute top-4 left-4 pointer-events-none ${
-                    isDark ? 'text-cyan-500/30' : 'text-cyan-600/20'
-                  }`}
-                />
-                <div className="relative pl-6 space-y-3">
-                  <p
-                    className={`text-sm sm:text-base italic leading-relaxed ${
-                      isDark ? 'text-slate-200' : 'text-slate-800'
-                    }`}
-                  >
-                    “{activeStory.testimonial.quote}”
-                  </p>
-                  <div
-                    className={`pt-2 border-t flex items-center justify-between text-xs ${
-                      isDark ? 'border-slate-800' : 'border-slate-200'
-                    }`}
-                  >
-                    <div>
-                      <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {activeStory.testimonial.author}
-                      </span>
-                      <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-                        {' '}— {activeStory.testimonial.role}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono text-emerald-600 flex items-center gap-1 font-semibold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                      Verified Client
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-            </motion.div>
-          </div>
-
+                <Building2 className="w-4 h-4 flex-shrink-0" />
+                <span>{story.clientName}</span>
+              </button>
+            );
+          })}
         </div>
 
+        {/* Selected Story Detailed Card */}
+        <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all duration-500 ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-xl'
+        }`}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+            {/* Left: Image & Quick Meta */}
+            <div className="lg:col-span-5 relative min-h-[360px] lg:min-h-full overflow-hidden bg-slate-900 flex flex-col justify-end p-8">
+              <div className="absolute inset-0">
+                <img
+                  src={currentStory.imageUrl}
+                  alt={currentStory.clientName}
+                  className="w-full h-full object-cover opacity-75 hover:scale-105 transition-transform duration-700"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+              </div>
+
+              <div className="relative z-10 space-y-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#00A9CF] text-slate-950 shadow">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>{currentStory.standard}</span>
+                </div>
+                <div className="text-xs font-mono text-slate-300 uppercase tracking-widest">
+                  {currentStory.industry}
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                  {currentStory.clientName}
+                </h3>
+              </div>
+            </div>
+
+            {/* Right: Detailed Content */}
+            <div className="lg:col-span-7 p-8 sm:p-10 lg:p-12 flex flex-col justify-between space-y-8">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#00A9CF]">
+                    Project Case Study
+                  </span>
+                  <h4 className="text-2xl sm:text-3xl font-black tracking-tight">
+                    {currentStory.title}
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                  <div className={`p-5 rounded-2xl border ${
+                    isDark ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-rose-400" />
+                      The Enterprise Challenge
+                    </h5>
+                    <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                      {currentStory.challenge}
+                    </p>
+                  </div>
+
+                  <div className={`p-5 rounded-2xl border ${
+                    isDark ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#00A9CF] mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#00A9CF]" />
+                      Our Solution & Framework
+                    </h5>
+                    <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                      {currentStory.solution}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Key Results Bullet Points */}
+                <div className="space-y-3 pt-2">
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                    <Award className="w-4 h-4 text-emerald-400" />
+                    Verified Results & Outcomes
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {currentStory.results.map((result, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3.5 rounded-xl border flex items-start gap-2.5 shadow-sm ${
+                          isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                        <span className={`text-xs font-semibold leading-tight ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                          {result}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs font-mono text-slate-400">
+                  Accreditation Date: <span className="text-white font-bold">{currentStory.date}</span>
+                </div>
+                <button
+                  onClick={() => onOpenConsultation(`Success Story Inquiry: ${currentStory.clientName}`)}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all shadow-md shadow-[#00A9CF]/25 flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <span>Request Similar Audit Strategy</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
 };
-
