@@ -1,0 +1,224 @@
+{
+  "companyConfig": {
+    "name": "Quality Centre Limited",
+    "tagline": "Empowering success by making business processes run faster, easier, and better.",
+    "phone": "+254 (0) 20 386 1120 / +254 722 000 000",
+    "email": "info@qualitycentre.co.ke",
+    "address": "Eden Square Business Centre, 5th Floor, Chiromo Road, Westlands, Nairobi, Kenya",
+    "experienceYears": "26+",
+    "foundedYear": "1998",
+    "stats": [
+      {
+        "value": "350+",
+        "label": "ISO Certifications Enabled",
+        "desc": "Across manufacturing, tech, financial & public sectors"
+      },
+      {
+        "value": "99.4%",
+        "label": "First-Attempt Audit Pass",
+        "desc": "Uncompromised compliance and digital audit readiness"
+      },
+      {
+        "value": "12+",
+        "label": "African Nations Served",
+        "desc": "Pan-African footprint across East, Central & West Africa"
+      },
+      {
+        "value": "65%",
+        "label": "Audit Prep Time Cut",
+        "desc": "Through automated SoftExpert & airSlate workflows"
+      }
+    ],
+    "logoType": "vector",
+    "logoUrl": ""
+  },
+  "heroConfig": {
+    "headline": "Empowering success by making business processes run faster, easier, and better.",
+    "subheadline": "Transforming ISO, Risk, GRC, and Sustainability requirements into high-performing, digitally-enabled operating systems across Kenya & East Africa.",
+    "badgeText": "KENYA & PAN-AFRICA ISO ADVISORY",
+    "videoUrl": "https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-with-graphs-and-data-31913-large.mp4",
+    "fallbackVideoUrl": "https://assets.mixkit.co/videos/preview/mixkit-circuit-board-with-moving-electronic-signals-41557-large.mp4",
+    "infographicUrl": "/src/assets/images/hero_infographic_1789451412328.jpg",
+    "bgMode": "video",
+    "videoOpacity": 0.35,
+    "ctaPrimaryText": "Explore Solutions",
+    "ctaSecondaryText": "Book ISO Audit"
+  },
+  "clientLogos": [
+    {
+      "id": "logo-1",
+      "name": "Kenya Commercial Bank",
+      "logoUrl": "https://images.unsplash.com/photo-1541359902798-011504994843?auto=format&fit=crop&w=300&q=80",
+      "industry": "Banking & Finance"
+    },
+    {
+      "id": "logo-2",
+      "name": "East African Breweries",
+      "logoUrl": "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=300&q=80",
+      "industry": "Manufacturing"
+    },
+    {
+      "id": "logo-3",
+      "name": "Safaricom Telemetry",
+      "logoUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=300&q=80",
+      "industry": "Telecommunications"
+    },
+    {
+      "id": "logo-4",
+      "name": "Bamburi Cement",
+      "logoUrl": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=300&q=80",
+      "industry": "Construction"
+    },
+    {
+      "id": "logo-5",
+      "name": "Equity Group Holdings",
+      "logoUrl": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=300&q=80",
+      "industry": "Financial Services"
+    },
+    {
+      "id": "logo-6",
+      "name": "Nairobi Bottlers",
+      "logoUrl": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=300&q=80",
+      "industry": "FMCG"
+    }
+  ],
+  "successStories": [
+    {
+      "id": "story-1",
+      "clientName": "Kenya Commercial Bank (KCB)",
+      "title": "ISO 27001 Information Security & Cybersecurity Transformation",
+      "industry": "Banking & Financial Services",
+      "challenge": "KCB needed to overhaul core banking cybersecurity controls and achieve rigorous ISO 27001 certification across 5 regional subsidiaries within 6 months.",
+      "solution": "Deployed ISO Quality Centre GRC automated control frameworks, real-time telemetry monitoring, and rigorous stage-1/stage-2 internal audit simulations.",
+      "results": [
+        "100% audit pass on first attempt",
+        "Reduced vulnerability remediation cycle by 64%",
+        "Zero critical non-conformities during final certification"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1541359902798-011504994843?auto=format&fit=crop&w=1200&q=80",
+      "standard": "ISO/IEC 27001:2022",
+      "date": "2026-02-15"
+    },
+    {
+      "id": "story-2",
+      "clientName": "Safaricom PLC",
+      "title": "5G Core Network Infrastructure & ISO 9001 Quality Management",
+      "industry": "Telecommunications",
+      "challenge": "Managing quality assurance and vendor compliance across nationwide 5G infrastructure rollouts while maintaining 99.999% uptime SLAs.",
+      "solution": "Integrated real-time quality telemetry dashboards and automated supplier quality audits tied directly into centralized database records.",
+      "results": [
+        "Standardized 45+ tier-1 vendor compliance workflows",
+        "Achieved 42% faster QA sign-offs",
+        "Seamless ISO 9001 quality recertification"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+      "standard": "ISO 9001:2015 QMS",
+      "date": "2026-04-20"
+    },
+    {
+      "id": "story-3",
+      "clientName": "Bamburi Cement",
+      "title": "Environmental & Occupational Health Safety Excellence (ISO 14001 & ISO 45001)",
+      "industry": "Manufacturing & Construction",
+      "challenge": "Eliminating workplace safety incidents and drastically lowering carbon footprint across heavy industrial clinker production plants.",
+      "solution": "Implemented comprehensive HSE risk assessment matrices, automated incident reporting workflows, and continuous environmental emission tracking.",
+      "results": [
+        "Zero Lost-Time Injuries (LTI) over 12 consecutive months",
+        "35% reduction in industrial waste discharge",
+        "Dual ISO 14001 & ISO 45001 accreditation"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80",
+      "standard": "ISO 14001 & ISO 45001",
+      "date": "2026-06-10"
+    }
+  ],
+  "galleryItems": [
+    {
+      "id": "media-1",
+      "type": "image",
+      "title": "Modern ISO & Digital GRC Architecture Infographic",
+      "description": "Executive system diagram illustrating the convergence of SoftExpert QMS, airSlate automation, and ISO 9001/27001/14001 compliance telemetry.",
+      "category": "infographic",
+      "mediaUrl": "/src/assets/images/hero_infographic_1789451412328.jpg",
+      "thumbnailUrl": "/src/assets/images/hero_infographic_1789451412328.jpg",
+      "tags": [
+        "ISO Architecture",
+        "Infographic",
+        "Digital QMS",
+        "Cloud Compliance"
+      ],
+      "date": "2026-09-10",
+      "isFeatured": true
+    },
+    {
+      "id": "media-2",
+      "type": "video",
+      "title": "Digital Compliance OS & Real-Time Telemetry Demo",
+      "description": "Live demonstration of continuous risk scanning, computerized corrective actions (CAPA), and automated audit trail logging.",
+      "category": "video",
+      "mediaUrl": "https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-with-graphs-and-data-31913-large.mp4",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Live Demo",
+        "Video",
+        "SoftExpert",
+        "Compliance OS"
+      ],
+      "date": "2026-09-02",
+      "duration": "02:45",
+      "isFeatured": true
+    },
+    {
+      "id": "media-3",
+      "type": "video",
+      "title": "ISO 27001 Cybersecurity & Kenya DPA 2019 Safeguards",
+      "description": "Interactive walkthrough of Annex A controls, privilege escalation monitoring, and automated vulnerability registers.",
+      "category": "video",
+      "mediaUrl": "https://assets.mixkit.co/videos/preview/mixkit-circuit-board-with-moving-electronic-signals-41557-large.mp4",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "ISO 27001",
+        "Kenya DPA",
+        "Cybersecurity",
+        "Data Protection"
+      ],
+      "date": "2026-08-18",
+      "duration": "03:10",
+      "isFeatured": false
+    },
+    {
+      "id": "media-4",
+      "type": "image",
+      "title": "On-Site Stage-2 Audit Readiness & Certification Simulation",
+      "description": "Lead auditors reviewing quality assurance documentation and process flow telemetry with manufacturing plant executives in Nairobi.",
+      "category": "fieldwork",
+      "mediaUrl": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Fieldwork",
+        "Stage-2 Audit",
+        "Inspection",
+        "Nairobi"
+      ],
+      "date": "2026-08-05",
+      "isFeatured": false
+    },
+    {
+      "id": "media-5",
+      "type": "image",
+      "title": "First-Attempt Audit Pass Accreditation Award",
+      "description": "Client certification handover celebration following 100% compliant Stage-1 & Stage-2 audits without major non-conformities.",
+      "category": "certification",
+      "mediaUrl": "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Certification",
+        "Accreditation",
+        "Audit Success",
+        "Kenya"
+      ],
+      "date": "2026-07-10",
+      "isFeatured": false
+    }
+  ]
+}

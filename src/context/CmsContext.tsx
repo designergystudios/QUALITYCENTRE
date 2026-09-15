@@ -88,6 +88,9 @@ export interface CmsContextType {
   resetToDefaults: () => void;
   exportConfigJson: () => string;
   importConfigJson: (jsonString: string) => boolean;
+  uploadLogoToDatabase: (image: string, fileName?: string) => Promise<string>;
+  isDatabaseConnected: boolean;
+  lastDatabaseSync: Date | null;
 }
 
 const DEFAULT_HERO_CONFIG: HeroConfig = {
@@ -339,7 +342,104 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // Persist hero config changes
+  const [isDatabaseConnected, setIsDatabaseConnected] = useState<boolean>(false);
+  const [lastDatabaseSync, setLastDatabaseSync] = useState<Date | null>(null);
+
+  // Fetch full state from backend persistent server database (the sole source of truth across all devices)
+  const fetchFromServer = async () => {
+    try {
+      const res = await fetch('/api/cms');
+      if (res.ok) {
+        const data = await res.json();
+        setIsDatabaseConnected(true);
+        setLastDatabaseSync(new Date());
+
+        // Check if there is a local logo that should be synced to database
+        const localSavedCompany = localStorage.getItem(STORAGE_KEYS.COMPANY);
+        let localParsed: CompanyConfig | null = null;
+        if (localSavedCompany) {
+          try {
+            localParsed = JSON.parse(localSavedCompany);
+          } catch {}
+        }
+
+        if (data.companyConfig) {
+          // If server database doesn't have a custom logo yet, but local browser has one from earlier upload, sync it to database!
+          if (
+            (!data.companyConfig.logoUrl || data.companyConfig.logoUrl === '') &&
+            localParsed?.logoUrl
+          ) {
+            console.log('Migrating local browser logo to database for all devices...');
+            fetch('/api/upload-logo', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: localParsed.logoUrl, fileName: 'migrated-logo' }),
+            }).then(async (r) => {
+              if (r.ok) {
+                const updated = await r.json();
+                if (updated.companyConfig) {
+                  setCompanyConfig(updated.companyConfig);
+                  try {
+                    localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(updated.companyConfig));
+                  } catch {}
+                }
+              }
+            }).catch(() => {});
+          } else {
+            setCompanyConfig(data.companyConfig);
+            try {
+              localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(data.companyConfig));
+            } catch {}
+          }
+        }
+
+        if (data.heroConfig) {
+          setHeroConfig(data.heroConfig);
+          try {
+            localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(data.heroConfig));
+          } catch {}
+        }
+
+        if (Array.isArray(data.clientLogos) && data.clientLogos.length > 0) {
+          setClientLogos(data.clientLogos);
+          try {
+            localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(data.clientLogos));
+          } catch {}
+        }
+
+        if (Array.isArray(data.successStories) && data.successStories.length > 0) {
+          setSuccessStories(data.successStories);
+          try {
+            localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(data.successStories));
+          } catch {}
+        }
+
+        if (Array.isArray(data.galleryItems) && data.galleryItems.length > 0) {
+          setGalleryItems(data.galleryItems);
+          try {
+            localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(data.galleryItems));
+          } catch {}
+        }
+      }
+    } catch (err) {
+      console.warn('Database sync status: fallback to local cache', err);
+      setIsDatabaseConnected(false);
+    }
+  };
+
+  // Synchronize on mount, on window focus, and on interval so all devices stay updated in real time
+  useEffect(() => {
+    fetchFromServer();
+    const interval = setInterval(fetchFromServer, 10000);
+    const onFocus = () => fetchFromServer();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
+  // Persist hero config changes to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(heroConfig));
@@ -348,7 +448,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [heroConfig]);
 
-  // Persist company config changes
+  // Persist company config changes to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(companyConfig));
@@ -412,11 +512,49 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateHeroConfig = (updates: Partial<HeroConfig>) => {
-    setHeroConfig((prev) => ({ ...prev, ...updates }));
+    const updated = { ...heroConfig, ...updates };
+    setHeroConfig(updated);
+    fetch('/api/hero', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    }).catch((e) => console.warn('Hero sync error', e));
   };
 
   const updateCompanyConfig = (updates: Partial<CompanyConfig>) => {
-    setCompanyConfig((prev) => ({ ...prev, ...updates }));
+    const updated = { ...companyConfig, ...updates };
+    setCompanyConfig(updated);
+    fetch('/api/company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    }).catch((e) => console.warn('Company sync error', e));
+  };
+
+  const uploadLogoToDatabase = async (image: string, fileName?: string): Promise<string> => {
+    try {
+      const res = await fetch('/api/upload-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image, fileName }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.companyConfig) {
+          setCompanyConfig(data.companyConfig);
+          try {
+            localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(data.companyConfig));
+          } catch {}
+        }
+        return data.logoUrl || image;
+      }
+    } catch (e) {
+      console.warn('Upload logo error', e);
+    }
+    // Fallback: update local config
+    const updated: CompanyConfig = { ...companyConfig, logoUrl: image, logoType: 'custom' };
+    setCompanyConfig(updated);
+    return image;
   };
 
   const addGalleryItem = (item: Omit<GalleryItem, 'id' | 'date'>): GalleryItem => {
@@ -427,6 +565,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       thumbnailUrl: item.thumbnailUrl || item.mediaUrl,
     };
     setGalleryItems((prev) => [newItem, ...prev]);
+    fetch('/api/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem),
+    }).catch(() => {});
     return newItem;
   };
 
@@ -438,6 +581,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteGalleryItem = (id: string) => {
     setGalleryItems((prev) => prev.filter((item) => item.id !== id));
+    fetch(`/api/gallery/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const addClientLogo = (logo: Omit<ClientLogoItem, 'id'>): ClientLogoItem => {
@@ -446,11 +590,17 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `logo-${Date.now()}`,
     };
     setClientLogos((prev) => [newLogo, ...prev]);
+    fetch('/api/client-logos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLogo),
+    }).catch(() => {});
     return newLogo;
   };
 
   const deleteClientLogo = (id: string) => {
     setClientLogos((prev) => prev.filter((item) => item.id !== id));
+    fetch(`/api/client-logos/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const addSuccessStory = (story: Omit<SuccessStoryItem, 'id' | 'date'>): SuccessStoryItem => {
@@ -460,6 +610,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: new Date().toISOString().split('T')[0],
     };
     setSuccessStories((prev) => [newStory, ...prev]);
+    fetch('/api/success-stories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newStory),
+    }).catch(() => {});
     return newStory;
   };
 
@@ -471,6 +626,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteSuccessStory = (id: string) => {
     setSuccessStories((prev) => prev.filter((item) => item.id !== id));
+    fetch(`/api/success-stories/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const setMediaAsHero = (type: 'video' | 'infographic', url: string) => {
@@ -559,6 +715,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetToDefaults,
         exportConfigJson,
         importConfigJson,
+        uploadLogoToDatabase,
+        isDatabaseConnected,
+        lastDatabaseSync,
       }}
     >
       {children}

@@ -25,8 +25,15 @@ export const Logo: React.FC<LogoProps> = ({
     xl: 'h-36',
   };
 
-  // If custom uploaded logo is configured or provided
-  if (companyConfig.logoUrl) {
+  const [imgError, setImgError] = React.useState(false);
+
+  // Reset imgError if logoUrl changes
+  React.useEffect(() => {
+    setImgError(false);
+  }, [companyConfig.logoUrl]);
+
+  // If custom uploaded logo is configured and successfully loads from database
+  if (companyConfig.logoUrl && !imgError) {
     return (
       <div className={`inline-flex items-center select-none ${heights[size]} ${className}`}>
         <img
@@ -34,6 +41,7 @@ export const Logo: React.FC<LogoProps> = ({
           alt={companyConfig.name || 'Quality Centre Logo'}
           className="h-full w-auto max-h-full object-contain"
           referrerPolicy="no-referrer"
+          onError={() => setImgError(true)}
         />
       </div>
     );

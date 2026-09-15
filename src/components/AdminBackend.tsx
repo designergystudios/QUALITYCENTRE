@@ -56,6 +56,9 @@ export const AdminBackend: React.FC = () => {
     resetToDefaults,
     exportConfigJson,
     importConfigJson,
+    uploadLogoToDatabase,
+    isDatabaseConnected,
+    lastDatabaseSync,
   } = useCms();
 
   const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'logos' | 'stories' | 'company' | 'backup'>('hero');
@@ -288,14 +291,26 @@ export const AdminBackend: React.FC = () => {
         }));
         showToast('Hero background infographic image uploaded!');
       } else if (target === 'logo') {
-        const updatedConfig = {
-          ...companyDraft,
-          logoUrl: dataUrl,
-          logoType: 'custom' as const,
-        };
-        setCompanyDraft(updatedConfig);
-        updateCompanyConfig(updatedConfig);
-        showToast('Site logo uploaded and applied across the website!');
+        uploadLogoToDatabase(dataUrl, file.name)
+          .then((savedUrl) => {
+            const updatedConfig = {
+              ...companyDraft,
+              logoUrl: savedUrl,
+              logoType: 'custom' as const,
+            };
+            setCompanyDraft(updatedConfig);
+            showToast('Logo uploaded and synchronized to database for all devices!');
+          })
+          .catch(() => {
+            const updatedConfig = {
+              ...companyDraft,
+              logoUrl: dataUrl,
+              logoType: 'custom' as const,
+            };
+            setCompanyDraft(updatedConfig);
+            updateCompanyConfig(updatedConfig);
+            showToast('Site logo uploaded and applied!');
+          });
       }
     };
     reader.onerror = () => {
@@ -1623,6 +1638,19 @@ USING (bucket_id = 'client-logos');`}
                             <span className="text-sky-300 select-all">{companyDraft.logoUrl}</span>
                           </div>
                         )}
+
+                        <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-700/50 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 text-emerald-300 font-semibold">
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            </span>
+                            <span>Cross-Device Database Sync: Active</span>
+                          </div>
+                          <span className="text-[11px] text-emerald-400 font-mono">
+                            {lastDatabaseSync ? `Last synced: ${lastDatabaseSync.toLocaleTimeString()}` : 'Database connected'}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
