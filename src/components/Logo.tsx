@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useCms } from '../context/CmsContext';
+import { LIVE_SUPABASE_LOGO_URL } from '../lib/supabase';
 
 interface LogoProps {
   className?: string;
@@ -27,21 +28,34 @@ export const Logo: React.FC<LogoProps> = ({
 
   const [imgError, setImgError] = React.useState(false);
 
-  // Reset imgError if logoUrl changes
+  // Active logo source: prefer live Supabase database URL over stale relative paths
+  let activeLogoSrc = companyConfig.logoUrl;
+  if (!activeLogoSrc || activeLogoSrc.startsWith('/uploads/')) {
+    activeLogoSrc = LIVE_SUPABASE_LOGO_URL;
+  }
+
+  // Reset imgError if logo source changes
   React.useEffect(() => {
     setImgError(false);
-  }, [companyConfig.logoUrl]);
+  }, [activeLogoSrc]);
 
-  // If custom uploaded logo is configured and successfully loads from database
-  if (companyConfig.logoUrl && !imgError) {
+  // If custom uploaded logo is configured and successfully loads from live database
+  if (activeLogoSrc && !imgError) {
     return (
       <div className={`inline-flex items-center select-none ${heights[size]} ${className}`}>
         <img
-          src={companyConfig.logoUrl}
+          src={activeLogoSrc}
           alt={companyConfig.name || 'Quality Centre Logo'}
           className="h-full w-auto max-h-full object-contain"
           referrerPolicy="no-referrer"
-          onError={() => setImgError(true)}
+          onError={() => {
+            if (activeLogoSrc !== LIVE_SUPABASE_LOGO_URL) {
+              // Try the live Supabase storage URL before giving up
+              activeLogoSrc = LIVE_SUPABASE_LOGO_URL;
+            } else {
+              setImgError(true);
+            }
+          }}
         />
       </div>
     );

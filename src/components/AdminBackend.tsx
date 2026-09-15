@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
@@ -108,6 +108,14 @@ export const AdminBackend: React.FC = () => {
   const heroImageInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const clientLogoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setCompanyDraft(companyConfig);
+  }, [companyConfig]);
+
+  useEffect(() => {
+    setHeroDraft(heroConfig);
+  }, [heroConfig]);
 
   if (!isAdminOpen) return null;
 

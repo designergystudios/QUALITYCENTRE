@@ -8,9 +8,54 @@ const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), 'data', 'cms-database.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.DATABASE_URL || 'https://zzgwjegqiefanzhshxyn.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
 // Ensure required directories exist
 fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Helper to sync state to live Supabase storage
+async function syncDatabaseToSupabase(data: any) {
+  if (!SUPABASE_KEY) return;
+  try {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'x-upsert': 'true',
+      },
+      body: JSON.stringify(data, null, 2),
+    });
+  } catch (err) {
+    console.warn('Background Supabase storage sync notice:', err);
+  }
+}
+
+// Helper to upload image to live Supabase storage bucket
+async function uploadImageToSupabase(buffer: Buffer, filename: string, mimeType: string): Promise<string | null> {
+  if (!SUPABASE_KEY) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/client-logos/${filename}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': mimeType,
+        'x-upsert': 'true',
+      },
+      body: buffer,
+    });
+    if (res.ok) {
+      return `${SUPABASE_URL}/storage/v1/object/public/client-logos/${filename}?v=${Date.now()}`;
+    }
+  } catch (e) {
+    console.warn('Failed to upload image to Supabase storage:', e);
+  }
+  return null;
+}
 
 // Helper to read database
 function readDatabase() {
@@ -29,6 +74,8 @@ function readDatabase() {
 function writeDatabase(data: any) {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    // Asynchronously push update to live Supabase database
+    syncDatabaseToSupabase(data).catch(() => {});
     return true;
   } catch (err) {
     console.error('Error writing cms-database.json:', err);
@@ -82,7 +129,7 @@ app.post('/api/company', (req: Request, res: Response) => {
 
 // POST dedicated upload-logo endpoint
 // Supports both base64 uploads and direct URLs, writing to persistent disk and database
-app.post('/api/upload-logo', (req: Request, res: Response) => {
+app.post('/api/upload-logo', async (req: Request, res: Response) => {
   const { image, fileName } = req.body;
   if (!image) {
     return res.status(400).json({ error: 'No image provided' });
@@ -90,22 +137,29 @@ app.post('/api/upload-logo', (req: Request, res: Response) => {
 
   let finalLogoUrl = image;
 
-  // If base64 data URL, write to static public/uploads folder for optimal CDN delivery
+  // If base64 data URL, write to static public/uploads folder AND live Supabase storage
   if (typeof image === 'string' && image.startsWith('data:image/')) {
     try {
       const matches = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
       if (matches) {
         let ext = matches[1].toLowerCase();
-        if (ext === 'svg+xml') ext = 'svg';
-        if (ext === 'jpeg') ext = 'jpg';
+        let mimeType = `image/${ext}`;
+        if (ext === 'svg+xml') { ext = 'svg'; mimeType = 'image/svg+xml'; }
+        if (ext === 'jpeg') { ext = 'jpg'; mimeType = 'image/jpeg'; }
         const buffer = Buffer.from(matches[2], 'base64');
-        const uniqueFileName = `logo-${Date.now()}.${ext}`;
+        const uniqueFileName = `quality-centre-logo.${ext}`;
         const targetPath = path.join(UPLOADS_DIR, uniqueFileName);
         fs.writeFileSync(targetPath, buffer);
         finalLogoUrl = `/uploads/${uniqueFileName}`;
+
+        // Upload to live Supabase Storage bucket for cross-device global availability
+        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType);
+        if (supabaseUrl) {
+          finalLogoUrl = supabaseUrl;
+        }
       }
     } catch (e) {
-      console.warn('Failed to save image to disk, falling back to database URL storage', e);
+      console.warn('Failed to save image to disk/supabase, falling back to database URL storage', e);
     }
   }
 

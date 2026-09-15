@@ -29,8 +29,8 @@
         "desc": "Through automated SoftExpert & airSlate workflows"
       }
     ],
-    "logoType": "vector",
-    "logoUrl": ""
+    "logoType": "custom",
+    "logoUrl": "https://zzgwjegqiefanzhshxyn.supabase.co/storage/v1/object/public/client-logos/quality-centre-logo.jpg"
   },
   "heroConfig": {
     "headline": "Empowering success by making business processes run faster, easier, and better.",

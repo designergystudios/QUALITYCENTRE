@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { COMPANY_DETAILS, ISO_STANDARDS } from '../data/content';
 import heroInfographicAsset from '../assets/images/hero_infographic_1789451412328.jpg';
+import {
+  LIVE_SUPABASE_LOGO_URL,
+  LIVE_SUPABASE_DB_URL,
+  fetchLiveDatabase,
+  uploadLogoToLiveStorage,
+} from '../lib/supabase';
 
 export interface GalleryItem {
   id: string;
@@ -118,7 +124,8 @@ const DEFAULT_COMPANY_CONFIG: CompanyConfig = {
   experienceYears: COMPANY_DETAILS.experienceYears,
   foundedYear: COMPANY_DETAILS.founded,
   stats: COMPANY_DETAILS.stats,
-  logoType: 'vector',
+  logoType: 'custom',
+  logoUrl: LIVE_SUPABASE_LOGO_URL,
 };
 
 const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
@@ -287,7 +294,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [companyConfig, setCompanyConfig] = useState<CompanyConfig>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.COMPANY);
-      if (saved) return { ...DEFAULT_COMPANY_CONFIG, ...JSON.parse(saved) };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // If saved in localStorage has an outdated relative path or empty logo, upgrade to live Supabase URL
+        if (!parsed.logoUrl || parsed.logoUrl.startsWith('/uploads/') || parsed.logoUrl === '') {
+          parsed.logoUrl = LIVE_SUPABASE_LOGO_URL;
+          parsed.logoType = 'custom';
+        }
+        return { ...DEFAULT_COMPANY_CONFIG, ...parsed };
+      }
     } catch (e) {
       console.warn('Failed to load company config from localStorage', e);
     }
@@ -345,84 +360,88 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDatabaseConnected, setIsDatabaseConnected] = useState<boolean>(false);
   const [lastDatabaseSync, setLastDatabaseSync] = useState<Date | null>(null);
 
-  // Fetch full state from backend persistent server database (the sole source of truth across all devices)
+  // Fetch full state from backend persistent server database and live Supabase cloud database
   const fetchFromServer = async () => {
+    let synced = false;
+
+    // 1. Fetch directly from live Supabase Cloud Database (global source of truth across all devices)
+    try {
+      const supabaseDb = await fetchLiveDatabase();
+      if (supabaseDb) {
+        setIsDatabaseConnected(true);
+        setLastDatabaseSync(new Date());
+        synced = true;
+
+        if (supabaseDb.companyConfig) {
+          const cfg: CompanyConfig = { ...supabaseDb.companyConfig };
+          if (!cfg.logoUrl || cfg.logoUrl.startsWith('/uploads/') || cfg.logoUrl === '') {
+            cfg.logoUrl = LIVE_SUPABASE_LOGO_URL;
+            cfg.logoType = 'custom';
+          }
+          setCompanyConfig(cfg);
+          try {
+            localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(cfg));
+          } catch {}
+        }
+        if (supabaseDb.heroConfig) {
+          setHeroConfig(supabaseDb.heroConfig);
+          try {
+            localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(supabaseDb.heroConfig));
+          } catch {}
+        }
+        if (Array.isArray(supabaseDb.clientLogos) && supabaseDb.clientLogos.length > 0) {
+          setClientLogos(supabaseDb.clientLogos);
+          try {
+            localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(supabaseDb.clientLogos));
+          } catch {}
+        }
+        if (Array.isArray(supabaseDb.successStories) && supabaseDb.successStories.length > 0) {
+          setSuccessStories(supabaseDb.successStories);
+          try {
+            localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(supabaseDb.successStories));
+          } catch {}
+        }
+        if (Array.isArray(supabaseDb.galleryItems) && supabaseDb.galleryItems.length > 0) {
+          setGalleryItems(supabaseDb.galleryItems);
+          try {
+            localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(supabaseDb.galleryItems));
+          } catch {}
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase cloud database check notice:', err);
+    }
+
+    // 2. Also check local server /api/cms in full-stack runtime
     try {
       const res = await fetch('/api/cms');
       if (res.ok) {
         const data = await res.json();
         setIsDatabaseConnected(true);
         setLastDatabaseSync(new Date());
-
-        // Check if there is a local logo that should be synced to database
-        const localSavedCompany = localStorage.getItem(STORAGE_KEYS.COMPANY);
-        let localParsed: CompanyConfig | null = null;
-        if (localSavedCompany) {
-          try {
-            localParsed = JSON.parse(localSavedCompany);
-          } catch {}
-        }
+        synced = true;
 
         if (data.companyConfig) {
-          // If server database doesn't have a custom logo yet, but local browser has one from earlier upload, sync it to database!
-          if (
-            (!data.companyConfig.logoUrl || data.companyConfig.logoUrl === '') &&
-            localParsed?.logoUrl
-          ) {
-            console.log('Migrating local browser logo to database for all devices...');
-            fetch('/api/upload-logo', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ image: localParsed.logoUrl, fileName: 'migrated-logo' }),
-            }).then(async (r) => {
-              if (r.ok) {
-                const updated = await r.json();
-                if (updated.companyConfig) {
-                  setCompanyConfig(updated.companyConfig);
-                  try {
-                    localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(updated.companyConfig));
-                  } catch {}
-                }
-              }
-            }).catch(() => {});
-          } else {
-            setCompanyConfig(data.companyConfig);
-            try {
-              localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(data.companyConfig));
-            } catch {}
+          const cfg: CompanyConfig = { ...data.companyConfig };
+          if (!cfg.logoUrl || cfg.logoUrl.startsWith('/uploads/') || cfg.logoUrl === '') {
+            cfg.logoUrl = LIVE_SUPABASE_LOGO_URL;
+            cfg.logoType = 'custom';
           }
-        }
-
-        if (data.heroConfig) {
-          setHeroConfig(data.heroConfig);
+          setCompanyConfig(cfg);
           try {
-            localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(data.heroConfig));
+            localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(cfg));
           } catch {}
         }
-
-        if (Array.isArray(data.clientLogos) && data.clientLogos.length > 0) {
-          setClientLogos(data.clientLogos);
-          try {
-            localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(data.clientLogos));
-          } catch {}
-        }
-
-        if (Array.isArray(data.successStories) && data.successStories.length > 0) {
-          setSuccessStories(data.successStories);
-          try {
-            localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(data.successStories));
-          } catch {}
-        }
-
-        if (Array.isArray(data.galleryItems) && data.galleryItems.length > 0) {
-          setGalleryItems(data.galleryItems);
-          try {
-            localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(data.galleryItems));
-          } catch {}
-        }
+        if (data.heroConfig) setHeroConfig(data.heroConfig);
+        if (Array.isArray(data.clientLogos) && data.clientLogos.length > 0) setClientLogos(data.clientLogos);
+        if (Array.isArray(data.successStories) && data.successStories.length > 0) setSuccessStories(data.successStories);
+        if (Array.isArray(data.galleryItems) && data.galleryItems.length > 0) setGalleryItems(data.galleryItems);
       }
     } catch (err) {
-      console.warn('Database sync status: fallback to local cache', err);
+      // /api/cms is optional when using direct Supabase cloud database
+    }
+
+    if (!synced) {
       setIsDatabaseConnected(false);
     }
   };
@@ -532,29 +551,47 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const uploadLogoToDatabase = async (image: string, fileName?: string): Promise<string> => {
+    let cloudUrl = LIVE_SUPABASE_LOGO_URL;
+
+    // 1. Upload directly to live Supabase Storage bucket for instant global availability
+    try {
+      cloudUrl = await uploadLogoToLiveStorage(image);
+    } catch (err) {
+      console.warn('Supabase storage direct upload notice:', err);
+    }
+
+    // 2. Notify backend server to sync disk and database
     try {
       const res = await fetch('/api/upload-logo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image, fileName }),
+        body: JSON.stringify({ image: cloudUrl || image, fileName }),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.companyConfig) {
-          setCompanyConfig(data.companyConfig);
+          const cfg = { ...data.companyConfig };
+          if (!cfg.logoUrl || cfg.logoUrl.startsWith('/uploads/') || cfg.logoUrl === '') {
+            cfg.logoUrl = cloudUrl;
+          }
+          setCompanyConfig(cfg);
           try {
-            localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(data.companyConfig));
+            localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(cfg));
           } catch {}
+          return data.logoUrl || cloudUrl;
         }
-        return data.logoUrl || image;
       }
     } catch (e) {
-      console.warn('Upload logo error', e);
+      console.warn('Backend upload-logo notice:', e);
     }
-    // Fallback: update local config
-    const updated: CompanyConfig = { ...companyConfig, logoUrl: image, logoType: 'custom' };
+
+    // Update state and persistent cache with live Supabase database URL
+    const updated: CompanyConfig = { ...companyConfig, logoUrl: cloudUrl, logoType: 'custom' };
     setCompanyConfig(updated);
-    return image;
+    try {
+      localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(updated));
+    } catch {}
+    return cloudUrl;
   };
 
   const addGalleryItem = (item: Omit<GalleryItem, 'id' | 'date'>): GalleryItem => {
