@@ -203,6 +203,112 @@ app.post('/api/hero', (req: Request, res: Response) => {
   res.json({ success: true, heroConfig: db.heroConfig });
 });
 
+// POST update book configuration (image, synopsis/description, title, takeaways, etc.)
+app.post('/api/book', async (req: Request, res: Response) => {
+  const db = readDatabase();
+  if (!db) return res.status(500).json({ error: 'Database unavailable' });
+
+  let coverImage = req.body.coverImage;
+  if (coverImage && typeof coverImage === 'string' && coverImage.startsWith('data:image/')) {
+    try {
+      const matches = coverImage.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (matches) {
+        let ext = matches[1].toLowerCase();
+        let mimeType = `image/${ext}`;
+        if (ext === 'svg+xml') { ext = 'svg'; mimeType = 'image/svg+xml'; }
+        if (ext === 'jpeg') { ext = 'jpg'; mimeType = 'image/jpeg'; }
+        const buffer = Buffer.from(matches[2], 'base64');
+        const cleanTitle = (req.body.title || 'iso-9000-secret')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .slice(0, 24);
+        const uniqueFileName = `book-cover-${cleanTitle}-${Date.now()}.${ext}`;
+
+        try {
+          const targetPath = path.join(UPLOADS_DIR, uniqueFileName);
+          fs.writeFileSync(targetPath, buffer);
+          coverImage = `/uploads/${uniqueFileName}`;
+        } catch {}
+
+        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType, 'client-logos');
+        if (supabaseUrl) {
+          coverImage = supabaseUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not save book cover to Supabase storage:', e);
+    }
+  }
+
+  db.bookConfig = {
+    ...(db.bookConfig || {}),
+    ...req.body,
+    ...(coverImage ? { coverImage } : {}),
+  };
+
+  writeDatabase(db);
+  res.json({ success: true, bookConfig: db.bookConfig });
+});
+
+// Dedicated endpoint to upload book cover to Supabase storage
+app.post('/api/upload-book-cover', async (req: Request, res: Response) => {
+  const { image, fileName, bookTitle } = req.body;
+  if (!image) {
+    return res.status(400).json({ error: 'No image provided' });
+  }
+
+  let finalCoverUrl = image;
+
+  if (typeof image === 'string' && image.startsWith('data:image/')) {
+    try {
+      const matches = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (matches) {
+        let ext = matches[1].toLowerCase();
+        let mimeType = `image/${ext}`;
+        if (ext === 'svg+xml') { ext = 'svg'; mimeType = 'image/svg+xml'; }
+        if (ext === 'jpeg') { ext = 'jpg'; mimeType = 'image/jpeg'; }
+        const buffer = Buffer.from(matches[2], 'base64');
+        const cleanTitle = (bookTitle || 'iso-9000-secret')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .slice(0, 24);
+        const uniqueFileName = fileName || `book-cover-${cleanTitle}-${Date.now()}.${ext}`;
+
+        try {
+          const targetPath = path.join(UPLOADS_DIR, uniqueFileName);
+          fs.writeFileSync(targetPath, buffer);
+          finalCoverUrl = `/uploads/${uniqueFileName}`;
+        } catch {}
+
+        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType, 'client-logos');
+        if (supabaseUrl) {
+          finalCoverUrl = supabaseUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to upload book cover to Supabase storage:', e);
+    }
+  }
+
+  // Also update db.bookConfig with the new cover URL
+  const db = readDatabase();
+  if (db) {
+    db.bookConfig = {
+      ...(db.bookConfig || {}),
+      coverImage: finalCoverUrl,
+    };
+    writeDatabase(db);
+  }
+
+  res.json({
+    success: true,
+    coverUrl: finalCoverUrl,
+    isCloudHosted: finalCoverUrl.includes('supabase.co'),
+    bookConfig: db ? db.bookConfig : undefined,
+  });
+});
+
 // Dedicated endpoint to upload client logo to Supabase storage
 app.post('/api/upload-client-logo', async (req: Request, res: Response) => {
   const { image, fileName, bucket = 'client-logos', clientName } = req.body;

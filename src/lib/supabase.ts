@@ -211,3 +211,36 @@ export async function uploadLogoToLiveStorage(fileOrDataUrl: string | File): Pro
     prefix: 'logo',
   });
 }
+
+/**
+ * Upload a book cover image directly to live Supabase Storage bucket ('client-logos')
+ */
+export async function uploadBookCoverToLiveStorage(
+  fileOrDataUrl: string | File,
+  bookTitle?: string
+): Promise<string> {
+  const cleanTitle = (bookTitle || 'iso-9000-secret')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 24);
+
+  let ext = 'jpg';
+  if (typeof fileOrDataUrl !== 'string') {
+    if (fileOrDataUrl.name.endsWith('.png')) ext = 'png';
+    else if (fileOrDataUrl.name.endsWith('.webp')) ext = 'webp';
+  } else if (fileOrDataUrl.includes('image/png')) {
+    ext = 'png';
+  } else if (fileOrDataUrl.includes('image/webp')) {
+    ext = 'webp';
+  }
+
+  const filename = `book-cover-${cleanTitle}-${Date.now()}.${ext}`;
+
+  return uploadFileToSupabaseStorage({
+    fileOrDataUrl,
+    bucket: 'client-logos',
+    filename,
+    prefix: 'book',
+  });
+}

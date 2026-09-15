@@ -220,5 +220,27 @@
       "date": "2026-07-10",
       "isFeatured": false
     }
-  ]
+  ],
+  "bookConfig": {
+    "title": "ISO 9000 Secret",
+    "subtitle": "Unlocking World Markets",
+    "author": "Julius N.",
+    "authorRole": "Founder & Lead Management Systems Strategist, Quality Centre Limited",
+    "coverImage": "",
+    "description": "In this seminal work, Julius N. demystifies international quality standards for visionary entrepreneurs and corporate executives across Africa and developing economies. The book reveals how to stop viewing ISO as bureaucratic red tape and instead wield it as a lethal competitive weapon to dominate domestic tenders, conquer export barriers, and command premium pricing in global supply chains.",
+    "keyTakeaways": [
+      "How African businesses can shatter international trade suspicion by mastering verifiable quality consistency.",
+      "The \"Anti-Bureaucracy Method\": Streamlining documentation so ISO fuels speed instead of paralyzing agility.",
+      "Winning lucrative corporate and government tenders through certified compliance credentials.",
+      "Bridging local operational culture with European, North American, and Asian import criteria."
+    ],
+    "quote": "Certification on the wall is useless if your processes remain slow, painful, and prone to error. Real ISO mastery is about speed, precision, and building an organization that can scale across borders without breaking.",
+    "purchaseUrl": "#book-consultation",
+    "socialLinks": {
+      "companyLinkedIn": "https://www.linkedin.com/company/quality-centreke/",
+      "companyTwitter": "https://x.com/qualitycentreke",
+      "founderLinkedIn": "https://www.linkedin.com/in/njatha/",
+      "founderTwitter": "https://x.com/juliusnmm"
+    }
+  }
 }

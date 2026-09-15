@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { COMPANY_DETAILS, ISO_STANDARDS } from '../data/content';
+import { COMPANY_DETAILS, ISO_STANDARDS, FOUNDER_BOOK } from '../data/content';
+import { FounderBook } from '../types';
 import heroInfographicAsset from '../assets/images/hero_infographic_1789451412328.jpg';
 import {
   LIVE_SUPABASE_LOGO_URL,
@@ -8,6 +9,7 @@ import {
   uploadLogoToLiveStorage,
   uploadClientLogoToLiveStorage,
   uploadStoryImageToLiveStorage,
+  uploadBookCoverToLiveStorage,
 } from '../lib/supabase';
 
 export interface GalleryItem {
@@ -76,6 +78,7 @@ export interface CmsContextType {
   galleryItems: GalleryItem[];
   clientLogos: ClientLogoItem[];
   successStories: SuccessStoryItem[];
+  bookConfig: FounderBook;
   isAdminOpen: boolean;
   isAdminAuthenticated: boolean;
   openAdmin: () => void;
@@ -84,6 +87,7 @@ export interface CmsContextType {
   logoutAdmin: () => void;
   updateHeroConfig: (updates: Partial<HeroConfig>) => void;
   updateCompanyConfig: (updates: Partial<CompanyConfig>) => void;
+  updateBookConfig: (updates: Partial<FounderBook>) => void;
   addGalleryItem: (item: Omit<GalleryItem, 'id' | 'date'>) => GalleryItem;
   updateGalleryItem: (id: string, updates: Partial<GalleryItem>) => void;
   deleteGalleryItem: (id: string) => void;
@@ -99,9 +103,12 @@ export interface CmsContextType {
   uploadLogoToDatabase: (image: string, fileName?: string) => Promise<string>;
   uploadClientLogoToStorage: (fileOrDataUrl: string | File, clientName?: string) => Promise<string>;
   uploadStoryImageToStorage: (fileOrDataUrl: string | File, storyTitle?: string) => Promise<string>;
+  uploadBookCoverToStorage: (fileOrDataUrl: string | File, bookTitle?: string) => Promise<string>;
   isDatabaseConnected: boolean;
   lastDatabaseSync: Date | null;
 }
+
+const DEFAULT_BOOK_CONFIG: FounderBook = FOUNDER_BOOK;
 
 const DEFAULT_HERO_CONFIG: HeroConfig = {
   headline: 'Empowering success by making business processes run faster, easier, and better.',
@@ -279,6 +286,7 @@ const STORAGE_KEYS = {
   GALLERY: 'qc_cms_gallery_v1',
   LOGOS: 'qc_cms_logos_v1',
   STORIES: 'qc_cms_stories_v1',
+  BOOK: 'qc_cms_book_v1',
   AUTH: 'qc_cms_admin_auth_v1',
 };
 
@@ -311,6 +319,16 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Failed to load company config from localStorage', e);
     }
     return DEFAULT_COMPANY_CONFIG;
+  });
+
+  const [bookConfig, setBookConfig] = useState<FounderBook>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.BOOK);
+      if (saved) return { ...DEFAULT_BOOK_CONFIG, ...JSON.parse(saved) };
+    } catch (e) {
+      console.warn('Failed to load book config from localStorage', e);
+    }
+    return DEFAULT_BOOK_CONFIG;
   });
 
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
@@ -411,6 +429,12 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(supabaseDb.galleryItems));
           } catch {}
         }
+        if (supabaseDb.bookConfig) {
+          setBookConfig(supabaseDb.bookConfig);
+          try {
+            localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(supabaseDb.bookConfig));
+          } catch {}
+        }
       }
     } catch (err) {
       console.warn('Supabase cloud database check notice:', err);
@@ -440,6 +464,12 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(data.clientLogos) && data.clientLogos.length > 0) setClientLogos(data.clientLogos);
         if (Array.isArray(data.successStories) && data.successStories.length > 0) setSuccessStories(data.successStories);
         if (Array.isArray(data.galleryItems) && data.galleryItems.length > 0) setGalleryItems(data.galleryItems);
+        if (data.bookConfig) {
+          setBookConfig(data.bookConfig);
+          try {
+            localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(data.bookConfig));
+          } catch {}
+        }
       }
     } catch (err) {
       // /api/cms is optional when using direct Supabase cloud database
@@ -479,6 +509,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Failed to save company config', e);
     }
   }, [companyConfig]);
+
+  // Persist book config
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(bookConfig));
+    } catch (e) {
+      console.warn('Failed to save book config', e);
+    }
+  }, [bookConfig]);
 
   // Persist gallery items
   useEffect(() => {
@@ -552,6 +591,64 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated),
     }).catch((e) => console.warn('Company sync error', e));
+  };
+
+  const updateBookConfig = (updates: Partial<FounderBook>) => {
+    const updated = { ...bookConfig, ...updates };
+    setBookConfig(updated);
+    fetch('/api/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    }).catch((e) => console.warn('Book sync error', e));
+  };
+
+  const uploadBookCoverToStorage = async (
+    fileOrDataUrl: string | File,
+    bookTitle?: string
+  ): Promise<string> => {
+    let cloudUrl = '';
+
+    // 1. Direct upload to Supabase Storage bucket ('client-logos')
+    try {
+      cloudUrl = await uploadBookCoverToLiveStorage(fileOrDataUrl, bookTitle || bookConfig.title);
+    } catch (err) {
+      console.warn('Direct Supabase book cover upload notice:', err);
+    }
+
+    let dataUrl = typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '';
+    if (typeof fileOrDataUrl !== 'string') {
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(fileOrDataUrl);
+      });
+    }
+
+    // 2. Server database update and backup upload
+    try {
+      const res = await fetch('/api/upload-book-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: cloudUrl || dataUrl,
+          bookTitle: bookTitle || bookConfig.title,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.coverUrl) {
+          cloudUrl = data.coverUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Backend upload-book-cover notice:', e);
+    }
+
+    const finalUrl = cloudUrl || dataUrl;
+    updateBookConfig({ coverImage: finalUrl });
+    return finalUrl;
   };
 
   const uploadLogoToDatabase = async (image: string, fileName?: string): Promise<string> => {
@@ -748,12 +845,14 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setGalleryItems(DEFAULT_GALLERY_ITEMS);
     setClientLogos(DEFAULT_CLIENT_LOGOS);
     setSuccessStories(DEFAULT_SUCCESS_STORIES);
+    setBookConfig(DEFAULT_BOOK_CONFIG);
     try {
       localStorage.removeItem(STORAGE_KEYS.HERO);
       localStorage.removeItem(STORAGE_KEYS.COMPANY);
       localStorage.removeItem(STORAGE_KEYS.GALLERY);
       localStorage.removeItem(STORAGE_KEYS.LOGOS);
       localStorage.removeItem(STORAGE_KEYS.STORIES);
+      localStorage.removeItem(STORAGE_KEYS.BOOK);
     } catch {}
   };
 
@@ -761,6 +860,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const config = {
       heroConfig,
       companyConfig,
+      bookConfig,
       galleryItems,
       clientLogos,
       successStories,
@@ -774,6 +874,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const parsed = JSON.parse(jsonString);
       if (parsed.heroConfig) setHeroConfig(parsed.heroConfig);
       if (parsed.companyConfig) setCompanyConfig(parsed.companyConfig);
+      if (parsed.bookConfig) setBookConfig(parsed.bookConfig);
       if (parsed.galleryItems && Array.isArray(parsed.galleryItems)) setGalleryItems(parsed.galleryItems);
       if (parsed.clientLogos && Array.isArray(parsed.clientLogos)) setClientLogos(parsed.clientLogos);
       if (parsed.successStories && Array.isArray(parsed.successStories)) setSuccessStories(parsed.successStories);
@@ -792,6 +893,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         galleryItems,
         clientLogos,
         successStories,
+        bookConfig,
         isAdminOpen,
         isAdminAuthenticated,
         openAdmin,
@@ -800,6 +902,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logoutAdmin,
         updateHeroConfig,
         updateCompanyConfig,
+        updateBookConfig,
         addGalleryItem,
         updateGalleryItem,
         deleteGalleryItem,
@@ -815,6 +918,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         uploadLogoToDatabase,
         uploadClientLogoToStorage,
         uploadStoryImageToStorage,
+        uploadBookCoverToStorage,
         isDatabaseConnected,
         lastDatabaseSync,
       }}

@@ -14,6 +14,7 @@ import {
   Share2,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useCms } from '../context/CmsContext';
 import { AfroPattern } from './AfroPattern';
 import { FOUNDER_BOOK } from '../data/content';
 
@@ -25,6 +26,9 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
   onOpenConsultation,
 }) => {
   const { isDark } = useTheme();
+  const { bookConfig } = useCms();
+  const book = bookConfig || FOUNDER_BOOK;
+
   const [downloadRequested, setDownloadRequested] = useState(false);
   const [executiveEmail, setExecutiveEmail] = useState('');
 
@@ -111,55 +115,69 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
                   <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-amber-500/25 via-cyan-500/20 to-transparent blur-2xl group-hover:opacity-100 transition-opacity" />
 
                   {/* 3D Book Chassis */}
-                  <div className="relative w-64 sm:w-72 aspect-[3/4.4] rounded-r-2xl rounded-l-md bg-gradient-to-br from-[#1E293B] via-[#0F172A] to-[#0A0E17] border-r-4 border-b-4 border-t border-l-8 border-slate-700 border-l-[#F59E0B] shadow-[20px_20px_40px_rgba(0,0,0,0.8)] p-6 flex flex-col justify-between overflow-hidden transform hover:-rotate-1 hover:scale-105 transition-all duration-300">
-                    
-                    {/* Afro Pattern Overlay on Book */}
-                    <div className="absolute inset-0 opacity-15 pointer-events-none">
-                      <AfroPattern variant="diamonds" opacity={0.8} />
+                  {book.coverImage ? (
+                    <div className="relative w-64 sm:w-72 aspect-[3/4.4] rounded-r-2xl rounded-l-md bg-slate-900 border-r-4 border-b-4 border-t border-l-8 border-slate-700 border-l-[#F59E0B] shadow-[20px_20px_40px_rgba(0,0,0,0.8)] overflow-hidden transform hover:-rotate-1 hover:scale-105 transition-all duration-300">
+                      <img
+                        src={book.coverImage}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      {/* Spine shadow overlay */}
+                      <div className="absolute top-0 bottom-0 left-0 w-4 bg-gradient-to-r from-black/70 to-transparent pointer-events-none" />
+                      {/* Gloss subtle sheen */}
+                      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/15 pointer-events-none" />
                     </div>
-
-                    {/* Book Spine Shadow Effect */}
-                    <div className="absolute top-0 bottom-0 left-0 w-4 bg-gradient-to-r from-black/60 to-transparent pointer-events-none" />
-
-                    {/* Top Tag & Publisher */}
-                    <div className="relative z-10 space-y-1">
-                      <div className="text-[10px] font-mono tracking-widest text-amber-400 font-bold uppercase">
-                        QUALITY CENTRE PRESS
-                      </div>
-                      <div className="h-0.5 w-12 bg-gradient-to-r from-cyan-400 to-amber-400" />
-                    </div>
-
-                    {/* Book Title & Artwork */}
-                    <div className="relative z-10 space-y-3 my-auto text-left">
-                      <div className="text-3xl sm:text-4xl font-black text-white tracking-tight font-serif leading-none">
-                        ISO 9000<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">
-                          SECRET
-                        </span>
-                      </div>
+                  ) : (
+                    <div className="relative w-64 sm:w-72 aspect-[3/4.4] rounded-r-2xl rounded-l-md bg-gradient-to-br from-[#1E293B] via-[#0F172A] to-[#0A0E17] border-r-4 border-b-4 border-t border-l-8 border-slate-700 border-l-[#F59E0B] shadow-[20px_20px_40px_rgba(0,0,0,0.8)] p-6 flex flex-col justify-between overflow-hidden transform hover:-rotate-1 hover:scale-105 transition-all duration-300">
                       
-                      <div className="text-xs sm:text-sm font-semibold tracking-wider text-cyan-300 uppercase">
-                        Unlocking World Markets
+                      {/* Afro Pattern Overlay on Book */}
+                      <div className="absolute inset-0 opacity-15 pointer-events-none">
+                        <AfroPattern variant="diamonds" opacity={0.8} />
                       </div>
 
-                      <div className="pt-2 text-[10px] text-slate-300 leading-relaxed font-sans line-clamp-3">
-                        How developing nations and ambitious enterprises dismantle trade barriers
-                        and master verified operational quality.
+                      {/* Book Spine Shadow Effect */}
+                      <div className="absolute top-0 bottom-0 left-0 w-4 bg-gradient-to-r from-black/60 to-transparent pointer-events-none" />
+
+                      {/* Top Tag & Publisher */}
+                      <div className="relative z-10 space-y-1">
+                        <div className="text-[10px] font-mono tracking-widest text-amber-400 font-bold uppercase">
+                          QUALITY CENTRE PRESS
+                        </div>
+                        <div className="h-0.5 w-12 bg-gradient-to-r from-cyan-400 to-amber-400" />
                       </div>
+
+                      {/* Book Title & Artwork */}
+                      <div className="relative z-10 space-y-3 my-auto text-left">
+                        <div className="text-3xl sm:text-4xl font-black text-white tracking-tight font-serif leading-none">
+                          {book.title.split(' ')[0] || 'ISO'} {book.title.split(' ')[1] || '9000'}<br />
+                          <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">
+                            {book.title.split(' ').slice(2).join(' ') || 'SECRET'}
+                          </span>
+                        </div>
+                        
+                        <div className="text-xs sm:text-sm font-semibold tracking-wider text-cyan-300 uppercase">
+                          {book.subtitle}
+                        </div>
+
+                        <div className="pt-2 text-[10px] text-slate-300 leading-relaxed font-sans line-clamp-3">
+                          {book.description}
+                        </div>
+                      </div>
+
+                      {/* Author Seal */}
+                      <div className="relative z-10 pt-4 border-t border-slate-700/80 flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] text-slate-400 uppercase font-mono">By Author</div>
+                          <div className="text-sm font-bold text-white">{book.author}</div>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-amber-400/20 border border-amber-400 flex items-center justify-center text-[10px] font-bold text-amber-400">
+                          QCL
+                        </div>
+                      </div>
+
                     </div>
-
-                    {/* Author Seal */}
-                    <div className="relative z-10 pt-4 border-t border-slate-700/80 flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] text-slate-400 uppercase font-mono">By Author</div>
-                        <div className="text-sm font-bold text-white">Julius N.</div>
-                      </div>
-                      <div className="w-8 h-8 rounded-full bg-amber-400/20 border border-amber-400 flex items-center justify-center text-[10px] font-bold text-amber-400">
-                        QCL
-                      </div>
-                    </div>
-
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -179,14 +197,14 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
                       isDark ? 'text-white' : 'text-slate-900'
                     }`}
                   >
-                    "{FOUNDER_BOOK.title}: {FOUNDER_BOOK.subtitle}"
+                    "{book.title}: {book.subtitle}"
                   </h3>
                   <div
                     className={`text-xs sm:text-sm font-medium ${
                       isDark ? 'text-cyan-300' : 'text-cyan-700'
                     }`}
                   >
-                    By {FOUNDER_BOOK.author} • {FOUNDER_BOOK.authorRole}
+                    By {book.author} • {book.authorRole}
                   </div>
                 </div>
 
@@ -195,7 +213,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
                     isDark ? 'text-slate-300' : 'text-slate-600'
                   }`}
                 >
-                  {FOUNDER_BOOK.description}
+                  {book.description}
                 </p>
 
                 {/* Key Takeaways */}
@@ -208,7 +226,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
                     Key Executive Takeaways in the Book:
                   </div>
                   <div className="space-y-2">
-                    {FOUNDER_BOOK.keyTakeaways.map((takeaway, idx) => (
+                    {book.keyTakeaways.map((takeaway, idx) => (
                       <div
                         key={idx}
                         className={`flex items-start gap-2.5 text-xs sm:text-sm ${
@@ -230,7 +248,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
                       : 'bg-amber-50/50 text-slate-700 border-amber-500'
                   }`}
                 >
-                  “{FOUNDER_BOOK.quote}”
+                  “{book.quote}”
                 </blockquote>
 
                 {/* CTAs & Executive Brief Download */}
@@ -286,7 +304,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Company LinkedIn */}
                     <a
-                      href={FOUNDER_BOOK.socialLinks.companyLinkedIn}
+                      href={book.socialLinks?.companyLinkedIn || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`p-3 rounded-xl border transition-all flex items-center justify-between group ${
@@ -317,7 +335,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
 
                     {/* Company Twitter/X */}
                     <a
-                      href={FOUNDER_BOOK.socialLinks.companyTwitter}
+                      href={book.socialLinks?.companyTwitter || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`p-3 rounded-xl border transition-all flex items-center justify-between group ${
@@ -348,7 +366,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
 
                     {/* Founder LinkedIn */}
                     <a
-                      href={FOUNDER_BOOK.socialLinks.founderLinkedIn}
+                      href={book.socialLinks?.founderLinkedIn || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`p-3 rounded-xl border transition-all flex items-center justify-between group ${
@@ -379,7 +397,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
 
                     {/* Founder Twitter/X */}
                     <a
-                      href={FOUNDER_BOOK.socialLinks.founderTwitter}
+                      href={book.socialLinks?.founderTwitter || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`p-3 rounded-xl border transition-all flex items-center justify-between group ${

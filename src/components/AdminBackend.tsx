@@ -26,6 +26,7 @@ import {
   Award,
   Database,
   ShieldCheck,
+  BookOpen,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useCms, GalleryItem } from '../context/CmsContext';
@@ -59,11 +60,14 @@ export const AdminBackend: React.FC = () => {
     uploadLogoToDatabase,
     uploadClientLogoToStorage,
     uploadStoryImageToStorage,
+    uploadBookCoverToStorage,
+    bookConfig,
+    updateBookConfig,
     isDatabaseConnected,
     lastDatabaseSync,
   } = useCms();
 
-  const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'logos' | 'stories' | 'company' | 'backup'>('hero');
+  const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'logos' | 'stories' | 'book' | 'company' | 'backup'>('hero');
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState(false);
@@ -76,6 +80,7 @@ export const AdminBackend: React.FC = () => {
   // Local draft states for hero
   const [heroDraft, setHeroDraft] = useState(heroConfig);
   const [companyDraft, setCompanyDraft] = useState(companyConfig);
+  const [bookDraft, setBookDraft] = useState(bookConfig);
 
   // Media upload form state
   const [newMediaType, setNewMediaType] = useState<'image' | 'video'>('image');
@@ -110,6 +115,7 @@ export const AdminBackend: React.FC = () => {
   const heroImageInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const clientLogoInputRef = useRef<HTMLInputElement>(null);
+  const bookCoverInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setCompanyDraft(companyConfig);
@@ -118,6 +124,10 @@ export const AdminBackend: React.FC = () => {
   useEffect(() => {
     setHeroDraft(heroConfig);
   }, [heroConfig]);
+
+  useEffect(() => {
+    setBookDraft(bookConfig);
+  }, [bookConfig]);
 
   if (!isAdminOpen) return null;
 
@@ -186,6 +196,43 @@ export const AdminBackend: React.FC = () => {
       setUploadingFileName(null);
       setUploadError('Failed to upload to Supabase Storage: ' + (err?.message || 'Check network connection'));
     }
+  };
+
+  const handleBookCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError('Book cover image size must be under 20MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(25);
+    setUploadingFileName(file.name);
+    setUploadError(null);
+
+    try {
+      setUploadProgress(60);
+      const publicUrl = await uploadBookCoverToStorage(file, bookDraft.title || 'iso-9000-secret');
+      setUploadProgress(100);
+      setBookDraft((prev) => ({ ...prev, coverImage: publicUrl }));
+      setIsUploading(false);
+      setUploadingFileName(null);
+      showToast(`Book cover "${file.name}" uploaded to live Supabase Storage!`);
+    } catch (err: any) {
+      console.error('Book cover upload error:', err);
+      setIsUploading(false);
+      setUploadingFileName(null);
+      setUploadError('Failed to upload book cover: ' + (err?.message || 'Check network connection'));
+      showToast('Upload error: failed to push cover image to Supabase');
+    }
+  };
+
+  const handleSaveBook = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    updateBookConfig(bookDraft);
+    showToast('Founder book details and synopsis saved successfully!');
   };
 
   const handleAddSuccessStory = (e: React.FormEvent) => {
@@ -626,6 +673,18 @@ export const AdminBackend: React.FC = () => {
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>Success Stories & Case Studies</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('book')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-left transition-all ${
+                  activeTab === 'book'
+                    ? 'bg-[#00A9CF] text-slate-950 shadow-md shadow-[#00A9CF]/25'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Founder Book & Synopsis</span>
               </button>
 
               <button
@@ -1597,6 +1656,420 @@ USING (bucket_id = 'client-logos');`}
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* =========================================================================
+                  TAB: FOUNDER BOOK & SYNOPSIS
+                  ========================================================================= */}
+              {activeTab === 'book' && (
+                <div className="space-y-6">
+                  {/* Tab Header & Action */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+                    <div>
+                      <h4 className="text-lg font-bold flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-amber-400" />
+                        <span>Founder Book Spotlight & Executive Synopsis</span>
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Update the 3D book cover image, executive synopsis, title, key takeaways, and purchase links.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSaveBook()}
+                      className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 shadow-md self-start sm:self-auto active:scale-95"
+                    >
+                      <Save className="w-4 h-4 text-slate-950" />
+                      <span>Save Book Changes</span>
+                    </button>
+                  </div>
+
+                  {/* Section 1: Book Cover Image Management */}
+                  <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h5 className="text-sm font-bold text-white flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-amber-400" />
+                          <span>Book Cover Image (3D Front Display)</span>
+                        </h5>
+                        <p className="text-xs text-slate-400">
+                          Upload high-resolution book artwork (PNG/JPG/WebP) or provide an image URL.
+                        </p>
+                      </div>
+
+                      {bookDraft.coverImage && (
+                        <button
+                          type="button"
+                          onClick={() => setBookDraft((prev) => ({ ...prev, coverImage: '' }))}
+                          className="px-2.5 py-1 text-[11px] font-bold text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 rounded-lg transition-colors flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Reset to Default Graphic</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                      {/* Left: Live 3D Cover Preview */}
+                      <div className="md:col-span-4 flex flex-col items-center">
+                        <div className="relative w-44 aspect-[3/4.4] rounded-r-xl rounded-l-sm bg-slate-950 border-r-4 border-b-4 border-t border-l-6 border-slate-700 border-l-amber-500 shadow-xl overflow-hidden flex flex-col items-center justify-center p-3 text-center">
+                          {bookDraft.coverImage ? (
+                            <img
+                              src={bookDraft.coverImage}
+                              alt="Book Cover Preview"
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="space-y-2 p-2">
+                              <div className="text-[9px] font-mono text-amber-400 uppercase font-bold">
+                                QUALITY CENTRE PRESS
+                              </div>
+                              <div className="text-lg font-black text-white font-serif leading-tight">
+                                {bookDraft.title || 'ISO 9000 SECRET'}
+                              </div>
+                              <div className="text-[10px] text-cyan-300 font-semibold uppercase">
+                                {bookDraft.subtitle || 'Unlocking World Markets'}
+                              </div>
+                              <div className="pt-2 text-[9px] text-slate-400 border-t border-slate-700">
+                                By {bookDraft.author || 'Julius N.'}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-3 text-center">
+                          {bookDraft.coverImage?.includes('supabase.co') ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>Live Supabase Cloud Storage</span>
+                            </span>
+                          ) : bookDraft.coverImage ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                              <ExternalLink className="w-3 h-3" />
+                              <span>External / Custom Image URL</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                              <span>Default Typography Graphic</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Upload controls */}
+                      <div className="md:col-span-8 space-y-4">
+                        {/* Hidden file input */}
+                        <input
+                          ref={bookCoverInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/jpg"
+                          onChange={handleBookCoverUpload}
+                          className="hidden"
+                        />
+
+                        <div className="p-4 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 text-center space-y-3">
+                          <Upload className="w-8 h-8 text-amber-400 mx-auto" />
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-white">
+                              Upload Cover Image directly to Supabase Bucket
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              PNG, JPG, or WebP up to 20MB. Automatically hosted on Supabase and distributed via CDN.
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={isUploading}
+                            onClick={() => bookCoverInputRef.current?.click()}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 transition-all inline-flex items-center gap-2 shadow disabled:opacity-50"
+                          >
+                            <Upload className="w-3.5 h-3.5 text-slate-950" />
+                            <span>{isUploading ? 'Uploading to Supabase...' : 'Browse Cover Image File'}</span>
+                          </button>
+                        </div>
+
+                        {/* Image URL fallback */}
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Or Paste Direct Image URL:
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="url"
+                              value={bookDraft.coverImage || ''}
+                              onChange={(e) => setBookDraft((prev) => ({ ...prev, coverImage: e.target.value }))}
+                              placeholder="https://.../book-cover.jpg"
+                              className="flex-1 px-3.5 py-2 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white font-mono"
+                            />
+                            {bookDraft.coverImage && (
+                              <button
+                                type="button"
+                                onClick={() => setBookDraft((prev) => ({ ...prev, coverImage: '' }))}
+                                className="px-3 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-xs"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Executive Synopsis & Core Text */}
+                  <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+                    <h5 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Type className="w-4 h-4 text-[#00A9CF]" />
+                      <span>Book Overview & Executive Synopsis</span>
+                    </h5>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Book Main Title
+                        </label>
+                        <input
+                          type="text"
+                          value={bookDraft.title}
+                          onChange={(e) => setBookDraft({ ...bookDraft, title: e.target.value })}
+                          placeholder="e.g. ISO 9000 Secret"
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={bookDraft.subtitle}
+                          onChange={(e) => setBookDraft({ ...bookDraft, subtitle: e.target.value })}
+                          placeholder="e.g. Unlocking World Markets"
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Author Name
+                        </label>
+                        <input
+                          type="text"
+                          value={bookDraft.author}
+                          onChange={(e) => setBookDraft({ ...bookDraft, author: e.target.value })}
+                          placeholder="e.g. Julius N."
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Author Role / Credential
+                        </label>
+                        <input
+                          type="text"
+                          value={bookDraft.authorRole}
+                          onChange={(e) => setBookDraft({ ...bookDraft, authorRole: e.target.value })}
+                          placeholder="e.g. Founder & Lead Management Systems Strategist"
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Synopsis Textarea */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-300">
+                          Book Synopsis / Executive Summary
+                        </label>
+                        <span className="text-[11px] text-slate-400">
+                          Displayed prominently beside the 3D book cover
+                        </span>
+                      </div>
+                      <textarea
+                        rows={5}
+                        value={bookDraft.description}
+                        onChange={(e) => setBookDraft({ ...bookDraft, description: e.target.value })}
+                        placeholder="Write or paste the book synopsis here..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border text-xs leading-relaxed bg-slate-950 border-slate-700 text-white focus:border-[#00A9CF] transition-colors"
+                      />
+                    </div>
+
+                    {/* Author Quote */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">
+                        Featured Author Quote (Callout Blockquote)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={bookDraft.quote}
+                        onChange={(e) => setBookDraft({ ...bookDraft, quote: e.target.value })}
+                        placeholder="Quote from the author..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border text-xs italic bg-slate-950 border-slate-700 text-amber-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 3: Key Executive Takeaways */}
+                  <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Award className="w-4 h-4 text-cyan-400" />
+                        <span>Key Executive Takeaways ({bookDraft.keyTakeaways.length})</span>
+                      </h5>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBookDraft((prev) => ({
+                            ...prev,
+                            keyTakeaways: [...prev.keyTakeaways, 'New executive takeaway principle'],
+                          }));
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Takeaway</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {bookDraft.keyTakeaways.map((takeaway, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="w-6 text-center text-xs font-mono font-bold text-slate-500">
+                            {idx + 1}.
+                          </span>
+                          <input
+                            type="text"
+                            value={takeaway}
+                            onChange={(e) => {
+                              const updated = [...bookDraft.keyTakeaways];
+                              updated[idx] = e.target.value;
+                              setBookDraft({ ...bookDraft, keyTakeaways: updated });
+                            }}
+                            className="flex-1 px-3.5 py-2 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = bookDraft.keyTakeaways.filter((_, i) => i !== idx);
+                              setBookDraft({ ...bookDraft, keyTakeaways: updated });
+                            }}
+                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                            title="Remove takeaway"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section 4: External & Social Links */}
+                  <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+                    <h5 className="text-sm font-bold text-white flex items-center gap-2">
+                      <ExternalLink className="w-4 h-4 text-[#00A9CF]" />
+                      <span>Book Acquisition & Leadership Profiles</span>
+                    </h5>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Purchase / Inquire Link (Amazon, Publisher, or Consultation)
+                        </label>
+                        <input
+                          type="url"
+                          value={bookDraft.purchaseLink}
+                          onChange={(e) => setBookDraft({ ...bookDraft, purchaseLink: e.target.value })}
+                          placeholder="https://... or #contact"
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Company LinkedIn
+                        </label>
+                        <input
+                          type="url"
+                          value={bookDraft.socialLinks.companyLinkedIn}
+                          onChange={(e) =>
+                            setBookDraft({
+                              ...bookDraft,
+                              socialLinks: { ...bookDraft.socialLinks, companyLinkedIn: e.target.value },
+                            })
+                          }
+                          className="w-full px-3.5 py-2 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Company X (Twitter)
+                        </label>
+                        <input
+                          type="url"
+                          value={bookDraft.socialLinks.companyTwitter}
+                          onChange={(e) =>
+                            setBookDraft({
+                              ...bookDraft,
+                              socialLinks: { ...bookDraft.socialLinks, companyTwitter: e.target.value },
+                            })
+                          }
+                          className="w-full px-3.5 py-2 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Founder LinkedIn Profile
+                        </label>
+                        <input
+                          type="url"
+                          value={bookDraft.socialLinks.founderLinkedIn}
+                          onChange={(e) =>
+                            setBookDraft({
+                              ...bookDraft,
+                              socialLinks: { ...bookDraft.socialLinks, founderLinkedIn: e.target.value },
+                            })
+                          }
+                          className="w-full px-3.5 py-2 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Founder X (Twitter) Profile
+                        </label>
+                        <input
+                          type="url"
+                          value={bookDraft.socialLinks.founderTwitter}
+                          onChange={(e) =>
+                            setBookDraft({
+                              ...bookDraft,
+                              socialLinks: { ...bookDraft.socialLinks, founderTwitter: e.target.value },
+                            })
+                          }
+                          className="w-full px-3.5 py-2 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-800 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveBook()}
+                        className="px-6 py-2.5 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 shadow-md active:scale-95"
+                      >
+                        <Save className="w-4 h-4 text-slate-950" />
+                        <span>Save Book Changes</span>
+                      </button>
                     </div>
                   </div>
                 </div>
