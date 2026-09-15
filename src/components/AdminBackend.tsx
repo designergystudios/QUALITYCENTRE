@@ -303,15 +303,15 @@ export const AdminBackend: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/95 backdrop-blur-xl overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
         className={`relative w-full max-w-6xl my-auto rounded-3xl overflow-hidden border shadow-2xl transition-colors ${
           isDark
-            ? 'bg-[#0B0F19] border-slate-800 text-slate-100'
-            : 'bg-white border-slate-200 text-slate-900'
+            ? 'bg-[#0B0F19] border-slate-700 text-slate-100'
+            : 'bg-white border-slate-300 text-slate-900'
         }`}
       >
         {/* Top Decorative Color Accent Bar */}
@@ -1159,34 +1159,43 @@ USING (bucket_id = 'client-logos');`}
                       Active Client Logos in Carousel ({clientLogos.length})
                     </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {clientLogos.map((client) => (
                         <div
                           key={client.id}
-                          className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between gap-4"
+                          className="p-4 rounded-xl border border-slate-700 bg-slate-900 space-y-3"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 flex items-center justify-center border border-slate-700 flex-shrink-0">
-                              <img src={client.logoUrl} alt={client.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-800 flex items-center justify-center border border-slate-600 flex-shrink-0">
+                                <img src={client.logoUrl} alt={client.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-white">{client.name}</div>
+                                <div className="text-[10px] text-slate-300">{client.industry || 'Enterprise'}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="text-xs font-bold text-white">{client.name}</div>
-                              <div className="text-[10px] text-slate-400">{client.industry || 'Enterprise'}</div>
-                            </div>
+
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remove "${client.name}" logo?`)) {
+                                  deleteClientLogo(client.id);
+                                  showToast('Client logo removed from database');
+                                }
+                              }}
+                              className="p-2 text-slate-300 hover:text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                              title="Delete logo"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
 
-                          <button
-                            onClick={() => {
-                              if (confirm(`Remove "${client.name}" logo?`)) {
-                                deleteClientLogo(client.id);
-                                showToast('Client logo removed');
-                              }
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors"
-                            title="Delete logo"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="pt-2 border-t border-slate-800">
+                            <span className="text-[10px] font-mono text-slate-400 block mb-0.5">Database Source URL:</span>
+                            <div className="text-[10px] font-mono text-sky-300 bg-slate-950 p-1.5 rounded border border-slate-800 truncate select-all">
+                              {client.logoUrl}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1255,27 +1264,28 @@ USING (bucket_id = 'client-logos');`}
 
                     {companyDraft.logoType === 'custom' && (
                       <div className="space-y-3 pt-2">
-                        <div className="flex items-center gap-4">
-                          <div className="w-32 h-16 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center p-2 overflow-hidden">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                          <div className="w-32 h-16 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center p-2 overflow-hidden flex-shrink-0">
                             {companyDraft.logoUrl ? (
                               <img
                                 src={companyDraft.logoUrl}
                                 alt="Custom Logo Preview"
                                 className="max-h-full max-w-full object-contain"
+                                referrerPolicy="no-referrer"
                               />
                             ) : (
                               <span className="text-[10px] text-slate-500">No Logo</span>
                             )}
                           </div>
-                          <div className="flex-1 space-y-2">
+                          <div className="flex-1 space-y-2 w-full">
                             <input
                               type="text"
                               value={companyDraft.logoUrl || ''}
                               onChange={(e) => setCompanyDraft({ ...companyDraft, logoUrl: e.target.value })}
-                              placeholder="Paste logo image URL or upload file..."
+                              placeholder="Paste database / Supabase storage logo URL..."
                               className="w-full px-3 py-2 rounded-xl border text-xs font-mono bg-slate-900 border-slate-700 text-white"
                             />
-                            <div className="flex gap-2">
+                            <div className="flex items-center justify-between gap-2">
                               <button
                                 type="button"
                                 onClick={() => logoInputRef.current?.click()}
@@ -1284,6 +1294,7 @@ USING (bucket_id = 'client-logos');`}
                                 <Upload className="w-3.5 h-3.5" />
                                 <span>Upload Logo File</span>
                               </button>
+                              <span className="text-[10px] font-mono text-emerald-400">Database Source of Truth</span>
                               <input
                                 ref={logoInputRef}
                                 type="file"
@@ -1294,6 +1305,13 @@ USING (bucket_id = 'client-logos');`}
                             </div>
                           </div>
                         </div>
+
+                        {companyDraft.logoUrl && (
+                          <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-300">
+                            <span className="text-slate-500">Active Database Logo URL: </span>
+                            <span className="text-sky-300 select-all">{companyDraft.logoUrl}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
