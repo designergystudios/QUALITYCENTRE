@@ -29,6 +29,7 @@ import {
   BookOpen,
   FileText,
   FileCheck,
+  Pencil,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useCms, GalleryItem } from '../context/CmsContext';
@@ -55,6 +56,7 @@ export const AdminBackend: React.FC = () => {
     addClientLogo,
     deleteClientLogo,
     addSuccessStory,
+    updateSuccessStory,
     deleteSuccessStory,
     setMediaAsHero,
     resetToDefaults,
@@ -103,6 +105,7 @@ export const AdminBackend: React.FC = () => {
   const [newLogoUrl, setNewLogoUrl] = useState('');
 
   // Success Story form state
+  const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
   const [storyClientName, setStoryClientName] = useState('');
   const [storyTitle, setStoryTitle] = useState('');
   const [storyIndustry, setStoryIndustry] = useState('');
@@ -272,29 +275,25 @@ export const AdminBackend: React.FC = () => {
     showToast('Founder book details and synopsis saved successfully!');
   };
 
-  const handleAddSuccessStory = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!storyClientName || !storyTitle || !storyImageUrl) {
-      setUploadError('Please provide client name, title, and upload image URL.');
-      return;
-    }
-    const resultsArray = storyResults
-      ? storyResults.split('\n').filter((r) => r.trim().length > 0)
-      : ['100% audit compliance achieved', 'Zero non-conformities found'];
+  const handleStartEditStory = (story: any) => {
+    setEditingStoryId(story.id);
+    setStoryClientName(story.clientName);
+    setStoryTitle(story.title);
+    setStoryIndustry(story.industry);
+    setStoryChallenge(story.challenge);
+    setStorySolution(story.solution);
+    setStoryResults(Array.isArray(story.results) ? story.results.join('\n') : '');
+    setStoryStandard(story.standard);
+    setStoryImageUrl(story.imageUrl);
+    setStoryPdfUrl(story.pdfUrl || '');
+    setStoryPdfName(story.pdfName || '');
 
-    addSuccessStory({
-      clientName: storyClientName,
-      title: storyTitle,
-      industry: storyIndustry || 'Enterprise',
-      challenge: storyChallenge || 'Rigorous multi-site compliance audit preparation.',
-      solution: storySolution || 'Deployed ISO Quality Centre automated control frameworks.',
-      results: resultsArray,
-      imageUrl: storyImageUrl,
-      standard: storyStandard || 'ISO 9001:2015',
-      pdfUrl: storyPdfUrl || undefined,
-      pdfName: storyPdfName || undefined,
-    });
+    const formEl = document.getElementById('success-story-form');
+    if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+  };
 
+  const handleCancelEditStory = () => {
+    setEditingStoryId(null);
     setStoryClientName('');
     setStoryTitle('');
     setStoryIndustry('');
@@ -306,7 +305,49 @@ export const AdminBackend: React.FC = () => {
     setStoryPdfUrl('');
     setStoryPdfName('');
     setUploadError(null);
-    showToast('Success story published to database! View live preview on front end.');
+  };
+
+  const handleAddSuccessStory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!storyClientName || !storyTitle || !storyImageUrl) {
+      setUploadError('Please provide client name, title, and upload image URL.');
+      return;
+    }
+    const resultsArray = storyResults
+      ? storyResults.split('\n').filter((r) => r.trim().length > 0)
+      : ['100% audit compliance achieved', 'Zero non-conformities found'];
+
+    if (editingStoryId) {
+      updateSuccessStory(editingStoryId, {
+        clientName: storyClientName,
+        title: storyTitle,
+        industry: storyIndustry || 'Enterprise',
+        challenge: storyChallenge || 'Rigorous multi-site compliance audit preparation.',
+        solution: storySolution || 'Deployed ISO Quality Centre automated control frameworks.',
+        results: resultsArray,
+        imageUrl: storyImageUrl,
+        standard: storyStandard || 'ISO 9001:2015',
+        pdfUrl: storyPdfUrl || undefined,
+        pdfName: storyPdfName || undefined,
+      });
+      showToast(`Success story for "${storyClientName}" updated in database!`);
+      handleCancelEditStory();
+    } else {
+      addSuccessStory({
+        clientName: storyClientName,
+        title: storyTitle,
+        industry: storyIndustry || 'Enterprise',
+        challenge: storyChallenge || 'Rigorous multi-site compliance audit preparation.',
+        solution: storySolution || 'Deployed ISO Quality Centre automated control frameworks.',
+        results: resultsArray,
+        imageUrl: storyImageUrl,
+        standard: storyStandard || 'ISO 9001:2015',
+        pdfUrl: storyPdfUrl || undefined,
+        pdfName: storyPdfName || undefined,
+      });
+      showToast('Success story published to database! View live preview on front end.');
+      handleCancelEditStory();
+    }
   };
 
   const handleAddClientLogo = async (e: React.FormEvent) => {
@@ -1494,11 +1535,25 @@ USING (bucket_id = 'client-logos');`}
                     </div>
                   </div>
 
-                  {/* Add New Success Story Form */}
-                  <div className="p-6 rounded-2xl border border-slate-700 bg-slate-900 space-y-5">
-                    <div className="flex items-center gap-2 text-sm font-bold text-[#00A9CF]">
-                      <ShieldCheck className="w-5 h-5" />
-                      <span>Publish New Client Success Story</span>
+                  {/* Add / Edit Success Story Form */}
+                  <div id="success-story-form" className="p-6 rounded-2xl border border-slate-700 bg-slate-900 space-y-5 transition-all">
+                    <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-800">
+                      <div className="flex items-center gap-2 text-sm font-bold text-[#00A9CF]">
+                        {editingStoryId ? <Pencil className="w-5 h-5 text-amber-400" /> : <ShieldCheck className="w-5 h-5" />}
+                        <span className={editingStoryId ? 'text-amber-400' : 'text-[#00A9CF]'}>
+                          {editingStoryId ? `Editing Case Study: ${storyClientName}` : 'Publish New Client Success Story'}
+                        </span>
+                      </div>
+                      {editingStoryId && (
+                        <button
+                          type="button"
+                          onClick={handleCancelEditStory}
+                          className="px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1.5"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Cancel Edit</span>
+                        </button>
+                      )}
                     </div>
 
                     <form onSubmit={handleAddSuccessStory} className="space-y-4">
@@ -1678,13 +1733,29 @@ USING (bucket_id = 'client-logos');`}
                         />
                       </div>
 
-                      <button
-                        type="submit"
-                        className="py-3 px-6 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 shadow-md"
-                      >
-                        <Plus className="w-4 h-4 text-slate-950" />
-                        <span>Publish Success Story to Database</span>
-                      </button>
+                      <div className="flex items-center gap-3 pt-2">
+                        <button
+                          type="submit"
+                          className={`py-3 px-6 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shadow-md ${
+                            editingStoryId
+                              ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                              : 'bg-[#00A9CF] hover:bg-[#0096C7] text-slate-950'
+                          }`}
+                        >
+                          {editingStoryId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                          <span>{editingStoryId ? 'Save & Update Success Story in Database' : 'Publish Success Story to Database'}</span>
+                        </button>
+
+                        {editingStoryId && (
+                          <button
+                            type="button"
+                            onClick={handleCancelEditStory}
+                            className="py-3 px-5 rounded-xl font-bold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </form>
                   </div>
 
@@ -1698,7 +1769,11 @@ USING (bucket_id = 'client-logos');`}
                       {successStories.map((story) => (
                         <div
                           key={story.id}
-                          className="p-5 rounded-2xl border border-slate-700 bg-slate-900 space-y-3"
+                          className={`p-5 rounded-2xl border transition-all space-y-3 ${
+                            editingStoryId === story.id
+                              ? 'border-amber-500/80 bg-slate-900 ring-2 ring-amber-500/30'
+                              : 'border-slate-700 bg-slate-900'
+                          }`}
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex items-start gap-4">
@@ -1723,6 +1798,15 @@ USING (bucket_id = 'client-logos');`}
                             </div>
 
                             <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleStartEditStory(story)}
+                                className="px-3 py-1.5 text-xs font-bold text-amber-300 bg-amber-500/20 border border-amber-500/30 hover:bg-amber-500/30 rounded-lg transition-colors flex items-center gap-1.5"
+                                title="Edit this success story"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+
                               <button
                                 onClick={() => {
                                   closeAdmin();

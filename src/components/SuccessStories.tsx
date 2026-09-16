@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { useCms } from '../context/CmsContext';
+import { useCms, SuccessStoryItem } from '../context/CmsContext';
 import { useTheme } from '../context/ThemeContext';
-import { uploadPdfToLiveStorage } from '../lib/supabase';
+import { uploadPdfToLiveStorage, uploadStoryImageToLiveStorage } from '../lib/supabase';
 import {
   Award,
   CheckCircle2,
@@ -24,17 +24,41 @@ import {
   Eye,
   Download,
   FileUp,
+  Pencil,
+  Layers,
+  LayoutGrid,
+  X,
+  Save,
 } from 'lucide-react';
 
 export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => void }> = ({ onOpenConsultation }) => {
   const { successStories, updateSuccessStory } = useCms();
   const { isDark } = useTheme();
   const [selectedStoryId, setSelectedStoryId] = useState<string>(successStories[0]?.id || '');
+  const [viewMode, setViewMode] = useState<'tab' | 'grid'>('tab');
+  
+  // PDF upload state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  
+
+  // Edit Story Modal State
+  const [editingStory, setEditingStory] = useState<SuccessStoryItem | null>(null);
+  const [editClientName, setEditClientName] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editIndustry, setEditIndustry] = useState('');
+  const [editStandard, setEditStandard] = useState('');
+  const [editChallenge, setEditChallenge] = useState('');
+  const [editSolution, setEditSolution] = useState('');
+  const [editResults, setEditResults] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [editPdfUrl, setEditPdfUrl] = useState('');
+  const [editPdfName, setEditPdfName] = useState('');
+  const [isModalUploading, setIsModalUploading] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modalImageInputRef = useRef<HTMLInputElement>(null);
+  const modalPdfInputRef = useRef<HTMLInputElement>(null);
 
   if (!successStories || successStories.length === 0) return null;
 
@@ -54,10 +78,8 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
       setUploadError(null);
       setUploadStatus(`Uploading "${file.name}" to Supabase Storage...`);
 
-      // Upload file directly to Supabase Storage
       const publicUrl = await uploadPdfToLiveStorage(file, currentStory.clientName || 'case-study');
 
-      // Update CMS Context & Backend Database with Supabase PDF URL
       updateSuccessStory(currentStory.id, {
         pdfUrl: publicUrl,
         pdfName: file.name,
@@ -84,6 +106,79 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
     }
   };
 
+  // Open Edit Story Modal
+  const openEditModal = (story: SuccessStoryItem) => {
+    setEditingStory(story);
+    setEditClientName(story.clientName);
+    setEditTitle(story.title);
+    setEditIndustry(story.industry);
+    setEditStandard(story.standard);
+    setEditChallenge(story.challenge);
+    setEditSolution(story.solution);
+    setEditResults(Array.isArray(story.results) ? story.results.join('\n') : '');
+    setEditImageUrl(story.imageUrl);
+    setEditPdfUrl(story.pdfUrl || '');
+    setEditPdfName(story.pdfName || '');
+  };
+
+  // Save Edits
+  const handleSaveModalEdits = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStory) return;
+
+    const resultsArray = editResults
+      ? editResults.split('\n').map((r) => r.trim()).filter(Boolean)
+      : ['100% audit pass rate achieved'];
+
+    updateSuccessStory(editingStory.id, {
+      clientName: editClientName,
+      title: editTitle,
+      industry: editIndustry || 'Enterprise',
+      standard: editStandard || 'ISO 9001:2015',
+      challenge: editChallenge,
+      solution: editSolution,
+      results: resultsArray,
+      imageUrl: editImageUrl,
+      pdfUrl: editPdfUrl || undefined,
+      pdfName: editPdfName || undefined,
+    });
+
+    setUploadStatus(`Saved changes for "${editClientName}" to database!`);
+    setTimeout(() => setUploadStatus(null), 5000);
+    setEditingStory(null);
+  };
+
+  // Modal Image Upload
+  const handleModalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsModalUploading(true);
+      const url = await uploadStoryImageToLiveStorage(file, editClientName || 'story');
+      setEditImageUrl(url);
+    } catch (err) {
+      console.error('Modal image upload failed:', err);
+    } finally {
+      setIsModalUploading(false);
+    }
+  };
+
+  // Modal PDF Upload
+  const handleModalPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsModalUploading(true);
+      const url = await uploadPdfToLiveStorage(file, editClientName || 'case-study');
+      setEditPdfUrl(url);
+      setEditPdfName(file.name);
+    } catch (err) {
+      console.error('Modal PDF upload failed:', err);
+    } finally {
+      setIsModalUploading(false);
+    }
+  };
+
   return (
     <section id="success-stories" className={`py-24 relative overflow-hidden transition-colors duration-300 ${
       isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
@@ -102,7 +197,7 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+        <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#00A9CF]/15 text-[#00A9CF] border border-[#00A9CF]/30 shadow-sm">
             <Sparkles className="w-4 h-4" />
             <span>Proven Enterprise Impact & Case Studies</span>
@@ -114,25 +209,34 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
             Explore how East Africa’s premier banks, telecommunications giants, and manufacturers achieved 100% compliance and audit excellence.
           </p>
 
-          {/* Quick PDF Upload Trigger in Header */}
-          <div className="pt-2 flex items-center justify-center gap-3">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#00A9CF] text-slate-950 hover:bg-[#0096C7] transition-all shadow-md active:scale-95 disabled:opacity-50"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Uploading to Supabase...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  <span>Upload Case Study PDF to Supabase</span>
-                </>
-              )}
-            </button>
+          {/* View Mode Toggle Pill Bar */}
+          <div className="pt-4 flex items-center justify-center gap-2">
+            <div className={`p-1.5 rounded-2xl border flex items-center gap-1 ${
+              isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <button
+                onClick={() => setViewMode('tab')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  viewMode === 'tab'
+                    ? 'bg-[#00A9CF] text-slate-950 shadow-md'
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span>Interactive Tab View ({successStories.length})</span>
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  viewMode === 'grid'
+                    ? 'bg-[#00A9CF] text-slate-950 shadow-md'
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span>Show All {successStories.length} Case Studies</span>
+              </button>
+            </div>
           </div>
 
           {/* Upload Status Banner */}
@@ -152,253 +256,548 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
           )}
         </div>
 
-        {/* Story Selector Tabs */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
-          {successStories.map((story) => {
-            const isSelected = story.id === currentStory.id;
-            return (
-              <button
-                key={story.id}
-                onClick={() => setSelectedStoryId(story.id)}
-                className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-300 shadow-sm ${
-                  isSelected
-                    ? 'bg-[#00A9CF] text-slate-950 shadow-lg shadow-[#00A9CF]/25 scale-105 ring-2 ring-[#00A9CF]/50'
-                    : isDark
-                    ? 'bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700 hover:text-white'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:text-slate-900'
-                }`}
-              >
-                <Building2 className="w-4 h-4 flex-shrink-0" />
-                <span>{story.clientName}</span>
-                {story.pdfUrl && (
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-sm" title="PDF Report Attached" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {/* =========================================================================
+            VIEW MODE 1: INTERACTIVE TABBED FOCUS VIEW
+            ========================================================================= */}
+        {viewMode === 'tab' && (
+          <>
+            {/* Story Selector Tabs */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
+              {successStories.map((story) => {
+                const isSelected = story.id === currentStory.id;
+                return (
+                  <button
+                    key={story.id}
+                    onClick={() => setSelectedStoryId(story.id)}
+                    className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-300 shadow-sm ${
+                      isSelected
+                        ? 'bg-[#00A9CF] text-slate-950 shadow-lg shadow-[#00A9CF]/25 scale-105 ring-2 ring-[#00A9CF]/50'
+                        : isDark
+                        ? 'bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700 hover:text-white'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 flex-shrink-0" />
+                    <span>{story.clientName}</span>
+                    {story.pdfUrl && (
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-sm" title="PDF Report Attached" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* Selected Story Detailed Card */}
-        <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all duration-500 ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-xl'
-        }`}>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            {/* Left: Image & Quick Meta */}
-            <div className="lg:col-span-5 relative min-h-[360px] lg:min-h-full overflow-hidden bg-slate-900 flex flex-col justify-end p-8">
-              <div className="absolute inset-0">
-                <img
-                  src={currentStory.imageUrl}
-                  alt={currentStory.clientName}
-                  className="w-full h-full object-cover opacity-75 hover:scale-105 transition-transform duration-700"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
-              </div>
+            {/* Selected Story Detailed Card */}
+            <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all duration-500 ${
+              isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-xl'
+            }`}>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                {/* Left: Image & Quick Meta */}
+                <div className="lg:col-span-5 relative min-h-[360px] lg:min-h-full overflow-hidden bg-slate-900 flex flex-col justify-end p-8">
+                  <div className="absolute inset-0">
+                    <img
+                      src={currentStory.imageUrl}
+                      alt={currentStory.clientName}
+                      className="w-full h-full object-cover opacity-75 hover:scale-105 transition-transform duration-700"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+                  </div>
 
-              <div className="relative z-10 space-y-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#00A9CF] text-slate-950 shadow">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>{currentStory.standard}</span>
+                  <div className="relative z-10 space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#00A9CF] text-slate-950 shadow">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{currentStory.standard}</span>
+                    </div>
+                    <div className="text-xs font-mono text-slate-300 uppercase tracking-widest">
+                      {currentStory.industry}
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                      {currentStory.clientName}
+                    </h3>
+                  </div>
                 </div>
-                <div className="text-xs font-mono text-slate-300 uppercase tracking-widest">
-                  {currentStory.industry}
+
+                {/* Right: Detailed Content */}
+                <div className="lg:col-span-7 p-8 sm:p-10 lg:p-12 flex flex-col justify-between space-y-8">
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#00A9CF]">
+                          Project Case Study
+                        </span>
+                        <h4 className="text-2xl sm:text-3xl font-black tracking-tight">
+                          {currentStory.title}
+                        </h4>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-start sm:self-center">
+                        <button
+                          onClick={() => openEditModal(currentStory)}
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-400 text-slate-950 hover:bg-amber-300 transition-all flex items-center gap-1.5 shadow"
+                          title="Edit this success story"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit Story</span>
+                        </button>
+
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#00A9CF]/15 text-[#00A9CF] hover:bg-[#00A9CF] hover:text-slate-950 border border-[#00A9CF]/30 transition-all flex items-center gap-1.5"
+                          title="Upload or replace PDF"
+                        >
+                          <FileUp className="w-3.5 h-3.5" />
+                          <span>{currentStory.pdfUrl ? 'PDF' : 'Upload PDF'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                      <div className={`p-5 rounded-2xl border ${
+                        isDark ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                      }`}>
+                        <h5 className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-rose-400" />
+                          The Enterprise Challenge
+                        </h5>
+                        <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                          {currentStory.challenge}
+                        </p>
+                      </div>
+
+                      <div className={`p-5 rounded-2xl border ${
+                        isDark ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                      }`}>
+                        <h5 className="text-xs font-bold uppercase tracking-wider text-[#00A9CF] mb-2 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#00A9CF]" />
+                          Our Solution & Framework
+                        </h5>
+                        <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                          {currentStory.solution}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Key Results Bullet Points */}
+                    <div className="space-y-3 pt-2">
+                      <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                        <Award className="w-4 h-4 text-emerald-400" />
+                        Verified Results & Outcomes
+                      </h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {currentStory.results.map((result, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-3.5 rounded-xl border flex items-start gap-2.5 shadow-sm ${
+                              isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                            <span className={`text-xs font-semibold leading-tight ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                              {result}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-xs font-mono text-slate-400">
+                      Accreditation Date: <span className={isDark ? 'text-white font-bold' : 'text-slate-900 font-bold'}>{currentStory.date}</span>
+                    </div>
+                    <button
+                      onClick={() => onOpenConsultation(`Success Story Inquiry: ${currentStory.clientName}`)}
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all shadow-md shadow-[#00A9CF]/25 flex items-center justify-center gap-2 active:scale-95"
+                    >
+                      <span>Request Similar Audit Strategy</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                  {currentStory.clientName}
-                </h3>
               </div>
             </div>
 
-            {/* Right: Detailed Content */}
-            <div className="lg:col-span-7 p-8 sm:p-10 lg:p-12 flex flex-col justify-between space-y-8">
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#00A9CF]">
-                      Project Case Study
-                    </span>
-                    <h4 className="text-2xl sm:text-3xl font-black tracking-tight">
-                      {currentStory.title}
-                    </h4>
-                  </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="self-start sm:self-center px-4 py-2 rounded-xl text-xs font-bold bg-[#00A9CF]/15 text-[#00A9CF] hover:bg-[#00A9CF] hover:text-slate-950 border border-[#00A9CF]/30 transition-all flex items-center gap-2"
-                    title="Upload or replace PDF for this case study"
-                  >
-                    <FileUp className="w-4 h-4" />
-                    <span>{currentStory.pdfUrl ? 'Replace PDF' : 'Upload PDF'}</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-                  <div className={`p-5 rounded-2xl border ${
-                    isDark ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-rose-400" />
-                      The Enterprise Challenge
-                    </h5>
-                    <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                      {currentStory.challenge}
-                    </p>
-                  </div>
-
-                  <div className={`p-5 rounded-2xl border ${
-                    isDark ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#00A9CF] mb-2 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#00A9CF]" />
-                      Our Solution & Framework
-                    </h5>
-                    <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                      {currentStory.solution}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Key Results Bullet Points */}
-                <div className="space-y-3 pt-2">
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                    <Award className="w-4 h-4 text-emerald-400" />
-                    Verified Results & Outcomes
-                  </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {currentStory.results.map((result, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-3.5 rounded-xl border flex items-start gap-2.5 shadow-sm ${
-                          isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200'
-                        }`}
-                      >
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                        <span className={`text-xs font-semibold leading-tight ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                          {result}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* PDF Upload / Embed Status Section inside Card */}
-              {!currentStory.pdfUrl && (
-                <div className={`p-5 rounded-2xl border-2 border-dashed ${
-                  isDark
-                    ? 'bg-slate-950/40 border-[#00A9CF]/30 text-slate-300'
-                    : 'bg-cyan-50/40 border-[#00A9CF]/40 text-slate-700'
-                } flex flex-col sm:flex-row items-center justify-between gap-4`}>
+            {/* Embedded PDF Viewer Section */}
+            {currentStory.pdfUrl && (
+              <div className={`mt-8 p-6 sm:p-8 rounded-3xl border shadow-2xl space-y-4 transition-all ${
+                isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#00A9CF]/20 flex items-center justify-center text-[#00A9CF] flex-shrink-0">
-                      <FileUp className="w-5 h-5" />
+                      <FileText className="w-5 h-5" />
                     </div>
                     <div>
-                      <h5 className="text-xs font-bold uppercase tracking-wider text-[#00A9CF] flex items-center gap-2">
-                        Upload Case Study PDF
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-mono normal-case">Supabase Cloud</span>
-                      </h5>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        Attach an official PDF report or certificate to embed directly in this case study.
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-bold text-white">
+                          {currentStory.pdfName || `${currentStory.clientName} Official PDF Document`}
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                          Supabase Storage
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 truncate max-w-lg font-mono">
+                        {currentStory.pdfUrl}
                       </p>
                     </div>
                   </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a
+                      href={currentStory.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#00A9CF] text-slate-950 hover:bg-[#0096C7] transition-all flex items-center gap-1.5 shadow"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open PDF in Supabase</span>
+                    </a>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all flex items-center gap-1.5"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Replace</span>
+                    </button>
+                    <button
+                      onClick={handleRemovePdf}
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 transition-all flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Embedded Iframe PDF Viewer */}
+                <div className="w-full h-[550px] sm:h-[650px] rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-inner relative">
+                  <iframe
+                    src={`${currentStory.pdfUrl}#toolbar=1`}
+                    title={currentStory.pdfName || `${currentStory.clientName} Case Study PDF`}
+                    className="w-full h-full border-0"
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* =========================================================================
+            VIEW MODE 2: SHOW ALL CASE STORIES GRID VIEW
+            ========================================================================= */}
+        {viewMode === 'grid' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {successStories.map((story) => (
+              <div
+                key={story.id}
+                className={`rounded-3xl border overflow-hidden shadow-xl flex flex-col justify-between transition-all duration-300 hover:shadow-2xl ${
+                  isDark ? 'bg-slate-900/90 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200'
+                }`}
+              >
+                <div>
+                  {/* Card Banner Image */}
+                  <div className="relative h-56 overflow-hidden bg-slate-950">
+                    <img
+                      src={story.imageUrl}
+                      alt={story.clientName}
+                      className="w-full h-full object-cover opacity-80 hover:scale-105 transition-transform duration-500"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+                    
+                    <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#00A9CF] text-slate-950 shadow">
+                        {story.standard}
+                      </span>
+                      <button
+                        onClick={() => openEditModal(story)}
+                        className="px-3 py-1 rounded-full text-xs font-bold bg-amber-400 text-slate-950 hover:bg-amber-300 transition-all flex items-center gap-1 shadow"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                    </div>
+
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <div className="text-[10px] font-mono text-cyan-300 uppercase tracking-widest">{story.industry}</div>
+                      <h3 className="text-xl font-black text-white">{story.clientName}</h3>
+                    </div>
+                  </div>
+
+                  {/* Card Content Body */}
+                  <div className="p-6 space-y-5">
+                    <div>
+                      <h4 className="text-lg font-bold text-[#00A9CF] leading-snug">{story.title}</h4>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className={`p-4 rounded-xl border text-xs ${
+                        isDark ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}>
+                        <div className="font-bold text-rose-400 mb-1 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                          Challenge
+                        </div>
+                        <p>{story.challenge}</p>
+                      </div>
+
+                      <div className={`p-4 rounded-xl border text-xs ${
+                        isDark ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}>
+                        <div className="font-bold text-[#00A9CF] mb-1 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#00A9CF]" />
+                          Solution
+                        </div>
+                        <p>{story.solution}</p>
+                      </div>
+                    </div>
+
+                    {/* Results Checklist */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Award className="w-3.5 h-3.5" />
+                        Verified Results
+                      </div>
+                      <ul className="space-y-1.5">
+                        {story.results.map((res, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>{res}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-6 pt-0 space-y-3">
+                  {story.pdfUrl && (
+                    <a
+                      href={story.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 border border-cyan-500/30 transition-all flex items-center justify-center gap-2"
+                    >
+                      <FileText className="w-4 h-4 text-cyan-400" />
+                      <span>View Attached PDF Report</span>
+                    </a>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEditModal(story)}
+                      className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Edit Fields</span>
+                    </button>
+                    <button
+                      onClick={() => onOpenConsultation(`Case Study: ${story.clientName}`)}
+                      className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-[#00A9CF] text-slate-950 hover:bg-[#0096C7] transition-all flex items-center justify-center gap-1.5 shadow"
+                    >
+                      <span>Inquire</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* =========================================================================
+            EDIT STORY MODAL DIALOG (FRONT END EDITING)
+            ========================================================================= */}
+        {editingStory && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+            <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-lg">
+                  <Pencil className="w-5 h-5" />
+                  <span>Edit Success Story: {editingStory.clientName}</span>
+                </div>
+                <button
+                  onClick={() => setEditingStory(null)}
+                  className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveModalEdits} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      Client / Enterprise Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editClientName}
+                      onChange={(e) => setEditClientName(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      Case Study Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      ISO Standard / Accreditation
+                    </label>
+                    <input
+                      type="text"
+                      value={editStandard}
+                      onChange={(e) => setEditStandard(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      Industry / Sector
+                    </label>
+                    <input
+                      type="text"
+                      value={editIndustry}
+                      onChange={(e) => setEditIndustry(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Banner Image Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Banner Image URL or Upload
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={modalImageInputRef}
+                      onChange={handleModalImageUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => modalImageInputRef.current?.click()}
+                      className="py-2.5 px-4 rounded-xl border border-dashed border-slate-700 hover:border-[#00A9CF] bg-slate-950 text-xs font-bold text-slate-300 flex items-center gap-2"
+                    >
+                      <Upload className="w-4 h-4 text-[#00A9CF]" />
+                      <span>{isModalUploading ? 'Uploading...' : 'Upload Image'}</span>
+                    </button>
+                    <input
+                      type="url"
+                      value={editImageUrl}
+                      onChange={(e) => setEditImageUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border text-xs font-mono bg-slate-950 border-slate-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* PDF Document Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    PDF Document URL or Upload
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      ref={modalPdfInputRef}
+                      onChange={handleModalPdfUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => modalPdfInputRef.current?.click()}
+                      className="py-2.5 px-4 rounded-xl border border-dashed border-slate-700 hover:border-[#00A9CF] bg-slate-950 text-xs font-bold text-slate-300 flex items-center gap-2"
+                    >
+                      <FileText className="w-4 h-4 text-[#00A9CF]" />
+                      <span>{isModalUploading ? 'Uploading...' : 'Upload PDF'}</span>
+                    </button>
+                    <input
+                      type="url"
+                      value={editPdfUrl}
+                      onChange={(e) => setEditPdfUrl(e.target.value)}
+                      placeholder="Supabase PDF URL..."
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border text-xs font-mono bg-slate-950 border-slate-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    The Enterprise Challenge
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editChallenge}
+                    onChange={(e) => setEditChallenge(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Our Solution & Framework
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editSolution}
+                    onChange={(e) => setEditSolution(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-700 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Verified Results (One per line)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editResults}
+                    onChange={(e) => setEditResults(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono bg-slate-950 border-slate-700 text-white"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 flex-shrink-0"
+                    type="button"
+                    onClick={() => setEditingStory(null)}
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
                   >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Uploading...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4" />
-                        <span>Select PDF</span>
-                      </>
-                    )}
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 transition-all flex items-center gap-2 shadow-md"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Save Changes</span>
                   </button>
                 </div>
-              )}
-
-              {/* Bottom Actions */}
-              <div className="pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-xs font-mono text-slate-400">
-                  Accreditation Date: <span className="text-white font-bold">{currentStory.date}</span>
-                </div>
-                <button
-                  onClick={() => onOpenConsultation(`Success Story Inquiry: ${currentStory.clientName}`)}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all shadow-md shadow-[#00A9CF]/25 flex items-center justify-center gap-2 active:scale-95"
-                >
-                  <span>Request Similar Audit Strategy</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Embedded PDF Viewer Section (if PDF is attached to selected story) */}
-        {currentStory.pdfUrl && (
-          <div className={`mt-8 p-6 sm:p-8 rounded-3xl border shadow-2xl space-y-4 transition-all ${
-            isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200'
-          }`}>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#00A9CF]/20 flex items-center justify-center text-[#00A9CF] flex-shrink-0">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-base font-bold text-white">
-                      {currentStory.pdfName || `${currentStory.clientName} Official PDF Document`}
-                    </h4>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                      Supabase Storage
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 truncate max-w-lg font-mono">
-                    {currentStory.pdfUrl}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <a
-                  href={currentStory.pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#00A9CF] text-slate-950 hover:bg-[#0096C7] transition-all flex items-center gap-1.5 shadow"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open PDF in Supabase</span>
-                </a>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all flex items-center gap-1.5"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Replace</span>
-                </button>
-                <button
-                  onClick={handleRemovePdf}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 transition-all flex items-center gap-1.5"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Remove</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Embedded Iframe PDF Viewer */}
-            <div className="w-full h-[550px] sm:h-[650px] rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-inner relative">
-              <iframe
-                src={`${currentStory.pdfUrl}#toolbar=1`}
-                title={currentStory.pdfName || `${currentStory.clientName} Case Study PDF`}
-                className="w-full h-full border-0"
-              />
+              </form>
             </div>
           </div>
         )}
