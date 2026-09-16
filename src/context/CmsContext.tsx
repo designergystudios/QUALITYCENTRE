@@ -75,12 +75,32 @@ export interface SuccessStoryItem {
   pdfName?: string;
 }
 
+export interface BlogPostItem {
+  id: string;
+  title: string;
+  slug: string;
+  category: 'ISO Standards' | 'Cybersecurity' | 'Audit Best Practices' | 'ESG & Sustainability';
+  excerpt: string;
+  content: string;
+  author: {
+    name: string;
+    role: string;
+    avatarUrl: string;
+  };
+  publishedDate: string;
+  readTime: string;
+  imageUrl: string;
+  tags: string[];
+  isFeatured?: boolean;
+}
+
 export interface CmsContextType {
   heroConfig: HeroConfig;
   companyConfig: CompanyConfig;
   galleryItems: GalleryItem[];
   clientLogos: ClientLogoItem[];
   successStories: SuccessStoryItem[];
+  blogPosts: BlogPostItem[];
   bookConfig: FounderBook;
   isAdminOpen: boolean;
   isAdminAuthenticated: boolean;
@@ -99,6 +119,9 @@ export interface CmsContextType {
   addSuccessStory: (story: Omit<SuccessStoryItem, 'id' | 'date'>) => SuccessStoryItem;
   updateSuccessStory: (id: string, updates: Partial<SuccessStoryItem>) => void;
   deleteSuccessStory: (id: string) => void;
+  addBlogPost: (post: Omit<BlogPostItem, 'id' | 'publishedDate'>) => BlogPostItem;
+  updateBlogPost: (id: string, updates: Partial<BlogPostItem>) => void;
+  deleteBlogPost: (id: string) => void;
   setMediaAsHero: (type: 'video' | 'infographic', url: string) => void;
   resetToDefaults: () => void;
   exportConfigJson: () => string;
@@ -109,6 +132,7 @@ export interface CmsContextType {
   uploadBookCoverToStorage: (fileOrDataUrl: string | File, bookTitle?: string) => Promise<string>;
   isDatabaseConnected: boolean;
   lastDatabaseSync: Date | null;
+  manualDatabaseSync: () => Promise<boolean>;
 }
 
 const DEFAULT_BOOK_CONFIG: FounderBook = FOUNDER_BOOK;
@@ -347,6 +371,103 @@ const DEFAULT_SUCCESS_STORIES: SuccessStoryItem[] = [
   },
 ];
 
+const DEFAULT_BLOG_POSTS: BlogPostItem[] = [
+  {
+    id: 'blog-1',
+    title: 'Navigating ISO/IEC 27001:2022 Annex A Controls in East African Banking',
+    slug: 'iso-27001-banking-east-africa',
+    category: 'Cybersecurity',
+    excerpt: 'A practical lead auditor guide to implementing real-time privilege escalation monitoring, automated vulnerability registers, and board-level risk reporting across regional financial institutions.',
+    content: `Financial institutions across Kenya, Uganda, Tanzania, and Rwanda face an increasingly complex threat matrix. With central bank cybersecurity directives enforcing strict adherence to international security frameworks, ISO/IEC 27001:2022 has become the benchmark standard for banking resilience.
+
+The 2022 revision of ISO 27001 restructured Annex A into 4 primary control themes: Organizational, People, Physical, and Technological. For chief information security officers (CISOs) in East Africa, key focus areas include:
+
+1. Technological Control 8.9 (Configuration Management): Establishing baseline configurations for core banking servers and continuous telemetry detection.
+2. Control 8.28 (Secure Coding): Integrating automated SAST/DAST security scans within DevOps deployment pipelines.
+3. Control 5.23 (Information Security in Cloud Services): Defining clear audit trails and shared responsibility agreements with AWS, Azure, and local data center providers.
+
+By pairing ISO 27001 ISMS governance with SoftExpert GRC automated control workflows, enterprise banks reduce vulnerability remediation timelines by up to 64% while maintaining 100% audit readiness for regulatory inspections.`,
+    author: {
+      name: 'Julius Niyongere',
+      role: 'Principal Consultant & PECB Lead Auditor',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+    },
+    publishedDate: '2026-08-18',
+    readTime: '6 min read',
+    imageUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80',
+    tags: ['ISO 27001', 'Cybersecurity', 'Banking', 'East Africa'],
+    isFeatured: true,
+  },
+  {
+    id: 'blog-2',
+    title: 'The Strategic ROI of ISO 9001:2015 Quality Management Systems',
+    slug: 'iso-9001-strategic-roi',
+    category: 'ISO Standards',
+    excerpt: 'How digital QMS automation reduces operational friction, eliminates non-conformity bottlenecks, and accelerates international supply chain readiness.',
+    content: `Many organization leaders incorrectly view ISO 9001 quality management as a bureaucratic exercise limited to paper binders and compliance checklists. However, when digitized and embedded directly into core operations, ISO 9001 becomes a high-impact catalyst for revenue expansion and customer retention.
+
+Key business impact indicators observed across Quality Centre client audits include:
+- 40% Reduction in Internal Process Rework: Clear process mapping and risk-based thinking prevent costly operational errors before product delivery.
+- Accelerated Supplier Qualification: Global tier-1 manufacturers and exporters mandate certified ISO 9001 QMS credentials prior to awarding procurement contracts.
+- Automated Root Cause Analysis (CAPA): Digital QMS tools enable instant corrective action tracking, preventing recurring non-conformities across multi-site operations.`,
+    author: {
+      name: 'Eng. Grace Muthoni',
+      role: 'Quality Systems Advisory Lead',
+      avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+    },
+    publishedDate: '2026-07-24',
+    readTime: '4 min read',
+    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+    tags: ['ISO 9001', 'QMS', 'Operational Excellence', 'ROI'],
+    isFeatured: false,
+  },
+  {
+    id: 'blog-3',
+    title: 'Integrating ESG Reporting & ISO 14001 Emissions Metrics with NEMA Standards',
+    slug: 'esg-reporting-iso-14001-nema',
+    category: 'ESG & Sustainability',
+    excerpt: 'Aligning your enterprise environmental management system with global sustainability frameworks and Kenya’s NEMA regulatory reporting obligations.',
+    content: `Environmental, Social, and Governance (ESG) compliance is no longer optional for African enterprises seeking capital investments or international market entry. Institutional investors and regulatory authorities demand audited carbon footprint data, effluent discharge tracking, and waste management transparency.
+
+By integrating ISO 14001:2015 Environmental Management Systems (EMS) with ISO 26001 social responsibility guidelines, companies create a single source of truth for Scope 1 & Scope 2 Emissions Quantification, NEMA Environmental Impact Assessment (EIA) Audits, and Sustainable Supply Chain Verification.`,
+    author: {
+      name: 'Dr. David Omondi',
+      role: 'ESG & Environmental Lead Auditor',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
+    },
+    publishedDate: '2026-06-30',
+    readTime: '5 min read',
+    imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
+    tags: ['ESG', 'ISO 14001', 'NEMA', 'Carbon Footprint'],
+    isFeatured: false,
+  },
+  {
+    id: 'blog-4',
+    title: 'How to Pass Stage 1 & Stage 2 Certification Audits on the First Attempt',
+    slug: 'pass-stage-1-stage-2-certification-audits',
+    category: 'Audit Best Practices',
+    excerpt: 'Key pitfalls to avoid during external certification audits, mock stage-1 gap analysis checklist, and mandatory documented information requirements.',
+    content: `Preparing for an official accreditation audit by certification bodies can be intimidating. However, understanding the distinct objectives of Stage 1 and Stage 2 audits allows leadership teams to approach inspection day with full confidence.
+
+Stage 1 Audit evaluates your documented information, management review minutes, internal audit logs, and scope definition. Stage 2 Audit evaluates on-site operational implementation across process owners.
+
+Top 3 Tips for a First-Attempt Pass:
+1. Conduct a Rigorous Mock Audit: Perform internal audit simulations 4 weeks prior to certification audit date.
+2. Complete Management Review Meetings: Ensure top management reviews internal audit findings and risk registers.
+3. Resolve Minor Non-Conformities Immediately: Treat minor findings as continuous improvement opportunities.`,
+    author: {
+      name: 'Julius Niyongere',
+      role: 'Principal Consultant & PECB Lead Auditor',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+    },
+    publishedDate: '2026-05-15',
+    readTime: '7 min read',
+    imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80',
+    tags: ['Certification Audit', 'PECB', 'Stage 2 Audit', 'Compliance'],
+    isFeatured: false,
+  },
+];
+
 const STORAGE_KEYS = {
   HERO: 'qc_cms_hero_v1',
   COMPANY: 'qc_cms_company_v1',
@@ -437,6 +558,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return DEFAULT_SUCCESS_STORIES;
   });
 
+  const [blogPosts, setBlogPosts] = useState<BlogPostItem[]>(DEFAULT_BLOG_POSTS);
+
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
     try {
@@ -457,6 +580,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clientLogos: ClientLogoItem[];
     successStories: SuccessStoryItem[];
     galleryItems: GalleryItem[];
+    blogPosts: BlogPostItem[];
     bookConfig: FounderBook;
   }>) => {
     return {
@@ -465,6 +589,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clientLogos: overrides?.clientLogos || clientLogos,
       successStories: overrides?.successStories || successStories,
       galleryItems: overrides?.galleryItems || galleryItems,
+      blogPosts: overrides?.blogPosts || blogPosts,
       bookConfig: overrides?.bookConfig || bookConfig,
       lastUpdated: Date.now(),
     };
@@ -544,29 +669,26 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(latestData.heroConfig));
         } catch {}
       }
-      if (Array.isArray(latestData.clientLogos) && latestData.clientLogos.length > 0) {
+      if (Array.isArray(latestData.clientLogos)) {
         setClientLogos(latestData.clientLogos);
         try {
           localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(latestData.clientLogos));
         } catch {}
       }
-      if (Array.isArray(latestData.successStories) && latestData.successStories.length > 0) {
+      if (Array.isArray(latestData.successStories)) {
         setSuccessStories(latestData.successStories);
         try {
           localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(latestData.successStories));
         } catch {}
       }
-      if (Array.isArray(latestData.galleryItems) && latestData.galleryItems.length > 0) {
+      if (Array.isArray(latestData.galleryItems)) {
         setGalleryItems(latestData.galleryItems);
-        try {
-          localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(latestData.galleryItems));
-        } catch {}
+      }
+      if (Array.isArray(latestData.blogPosts)) {
+        setBlogPosts(latestData.blogPosts);
       }
       if (latestData.bookConfig) {
         setBookConfig(latestData.bookConfig);
-        try {
-          localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(latestData.bookConfig));
-        } catch {}
       }
     } else {
       setIsDatabaseConnected(false);
@@ -669,6 +791,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateHeroConfig = (updates: Partial<HeroConfig>) => {
     const updated = { ...heroConfig, ...updates };
     setHeroConfig(updated);
+    try {
+      localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(updated));
+    } catch {}
+    const snapshot = getFullDatabaseSnapshot({ heroConfig: updated });
+    syncDatabaseToCloud(snapshot);
     fetch('/api/hero', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -679,6 +806,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateCompanyConfig = (updates: Partial<CompanyConfig>) => {
     const updated = { ...companyConfig, ...updates };
     setCompanyConfig(updated);
+    try {
+      localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(updated));
+    } catch {}
+    const snapshot = getFullDatabaseSnapshot({ companyConfig: updated });
+    syncDatabaseToCloud(snapshot);
     fetch('/api/company', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -689,6 +821,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBookConfig = (updates: Partial<FounderBook>) => {
     const updated = { ...bookConfig, ...updates };
     setBookConfig(updated);
+    try {
+      localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(updated));
+    } catch {}
+    const snapshot = getFullDatabaseSnapshot({ bookConfig: updated });
+    syncDatabaseToCloud(snapshot);
     fetch('/api/book', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -702,7 +839,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): Promise<string> => {
     let cloudUrl = '';
 
-    // 1. Direct upload to Supabase Storage bucket ('client-logos')
     try {
       cloudUrl = await uploadBookCoverToLiveStorage(fileOrDataUrl, bookTitle || bookConfig.title);
     } catch (err) {
@@ -719,7 +855,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
-    // 2. Server database update and backup upload
     try {
       const res = await fetch('/api/upload-book-cover', {
         method: 'POST',
@@ -747,44 +882,29 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const uploadLogoToDatabase = async (image: string, fileName?: string): Promise<string> => {
     let cloudUrl = LIVE_SUPABASE_LOGO_URL;
 
-    // 1. Upload directly to live Supabase Storage bucket for instant global availability
     try {
       cloudUrl = await uploadLogoToLiveStorage(image);
     } catch (err) {
       console.warn('Supabase storage direct upload notice:', err);
     }
 
-    // 2. Notify backend server to sync disk and database
-    try {
-      const res = await fetch('/api/upload-logo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: cloudUrl || image, fileName }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.companyConfig) {
-          const cfg = { ...data.companyConfig };
-          if (!cfg.logoUrl || cfg.logoUrl.startsWith('/uploads/') || cfg.logoUrl === '') {
-            cfg.logoUrl = cloudUrl;
-          }
-          setCompanyConfig(cfg);
-          try {
-            localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(cfg));
-          } catch {}
-          return data.logoUrl || cloudUrl;
-        }
-      }
-    } catch (e) {
-      console.warn('Backend upload-logo notice:', e);
-    }
-
-    // Update state and persistent cache with live Supabase database URL
     const updated: CompanyConfig = { ...companyConfig, logoUrl: cloudUrl, logoType: 'custom' };
     setCompanyConfig(updated);
     try {
       localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(updated));
     } catch {}
+
+    const snapshot = getFullDatabaseSnapshot({ companyConfig: updated });
+    syncDatabaseToCloud(snapshot);
+
+    try {
+      fetch('/api/upload-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: cloudUrl || image, fileName }),
+      }).catch(() => {});
+    } catch (e) {}
+
     return cloudUrl;
   };
 
@@ -795,7 +915,18 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: new Date().toISOString().split('T')[0],
       thumbnailUrl: item.thumbnailUrl || item.mediaUrl,
     };
-    setGalleryItems((prev) => [newItem, ...prev]);
+    let updatedList: GalleryItem[] = [];
+    setGalleryItems((prev) => {
+      updatedList = [newItem, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(updatedList));
+      } catch {}
+      return updatedList;
+    });
+
+    const snapshot = getFullDatabaseSnapshot({ galleryItems: updatedList });
+    syncDatabaseToCloud(snapshot);
+
     fetch('/api/gallery', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -805,13 +936,32 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateGalleryItem = (id: string, updates: Partial<GalleryItem>) => {
-    setGalleryItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    );
+    let updatedList: GalleryItem[] = [];
+    setGalleryItems((prev) => {
+      updatedList = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
+      try {
+        localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(updatedList));
+      } catch {}
+      return updatedList;
+    });
+
+    const snapshot = getFullDatabaseSnapshot({ galleryItems: updatedList });
+    syncDatabaseToCloud(snapshot);
   };
 
   const deleteGalleryItem = (id: string) => {
-    setGalleryItems((prev) => prev.filter((item) => item.id !== id));
+    let updatedList: GalleryItem[] = [];
+    setGalleryItems((prev) => {
+      updatedList = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(updatedList));
+      } catch {}
+      return updatedList;
+    });
+
+    const snapshot = getFullDatabaseSnapshot({ galleryItems: updatedList });
+    syncDatabaseToCloud(snapshot);
+
     fetch(`/api/gallery/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
@@ -829,45 +979,60 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...logo,
       id: tempId,
     };
-    setClientLogos((prev) => [newLogo, ...prev]);
+    let updatedList: ClientLogoItem[] = [];
+    setClientLogos((prev) => {
+      updatedList = [newLogo, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(updatedList));
+      } catch {}
+      return updatedList;
+    });
+
+    const snapshot = getFullDatabaseSnapshot({ clientLogos: updatedList });
+    syncDatabaseToCloud(snapshot);
 
     (async () => {
       let finalUrl = logo.logoUrl;
       if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
         try {
           finalUrl = await uploadClientLogoToLiveStorage(finalUrl, logo.name);
-          setClientLogos((prev) =>
-            prev.map((item) => (item.id === tempId ? { ...item, logoUrl: finalUrl } : item))
-          );
+          let listWithLogo: ClientLogoItem[] = [];
+          setClientLogos((prev) => {
+            listWithLogo = prev.map((item) => (item.id === tempId ? { ...item, logoUrl: finalUrl } : item));
+            try {
+              localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(listWithLogo));
+            } catch {}
+            return listWithLogo;
+          });
+          syncDatabaseToCloud(getFullDatabaseSnapshot({ clientLogos: listWithLogo }));
         } catch (err) {
           console.warn('Direct Supabase logo upload notice:', err);
         }
       }
 
-      try {
-        const res = await fetch('/api/client-logos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...newLogo, logoUrl: finalUrl }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.clientLogo?.logoUrl && data.clientLogo.logoUrl !== finalUrl) {
-            setClientLogos((prev) =>
-              prev.map((item) => (item.id === tempId ? { ...item, logoUrl: data.clientLogo.logoUrl } : item))
-            );
-          }
-        }
-      } catch (e) {
-        console.warn('API client-logos sync notice:', e);
-      }
+      fetch('/api/client-logos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newLogo, logoUrl: finalUrl }),
+      }).catch(() => {});
     })();
 
     return newLogo;
   };
 
   const deleteClientLogo = (id: string) => {
-    setClientLogos((prev) => prev.filter((item) => item.id !== id));
+    let updatedList: ClientLogoItem[] = [];
+    setClientLogos((prev) => {
+      updatedList = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(updatedList));
+      } catch {}
+      return updatedList;
+    });
+
+    const snapshot = getFullDatabaseSnapshot({ clientLogos: updatedList });
+    syncDatabaseToCloud(snapshot);
+
     fetch(`/api/client-logos/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
@@ -953,9 +1118,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let nextStories: SuccessStoryItem[] = [];
     setSuccessStories((prev) => {
       nextStories = prev.filter((item) => item.id !== id);
-      try {
-        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(nextStories));
-      } catch (e) {}
       return nextStories;
     });
 
@@ -964,20 +1126,52 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetch(`/api/success-stories/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
+  const addBlogPost = (post: Omit<BlogPostItem, 'id' | 'publishedDate'>): BlogPostItem => {
+    const newPost: BlogPostItem = {
+      ...post,
+      id: `blog-${Date.now()}`,
+      publishedDate: new Date().toISOString().split('T')[0],
+    };
+    let updatedPosts: BlogPostItem[] = [];
+    setBlogPosts((prev) => {
+      updatedPosts = [newPost, ...prev];
+      return updatedPosts;
+    });
+    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: updatedPosts }));
+    return newPost;
+  };
+
+  const updateBlogPost = (id: string, updates: Partial<BlogPostItem>) => {
+    let updatedPosts: BlogPostItem[] = [];
+    setBlogPosts((prev) => {
+      updatedPosts = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      return updatedPosts;
+    });
+    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: updatedPosts }));
+  };
+
+  const deleteBlogPost = (id: string) => {
+    let updatedPosts: BlogPostItem[] = [];
+    setBlogPosts((prev) => {
+      updatedPosts = prev.filter((p) => p.id !== id);
+      return updatedPosts;
+    });
+    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: updatedPosts }));
+  };
+
   const setMediaAsHero = (type: 'video' | 'infographic', url: string) => {
+    let updatedHero = heroConfig;
     if (type === 'video') {
-      setHeroConfig((prev) => ({
-        ...prev,
-        videoUrl: url,
-        bgMode: 'video',
-      }));
+      updatedHero = { ...heroConfig, videoUrl: url, bgMode: 'video' };
     } else {
-      setHeroConfig((prev) => ({
-        ...prev,
-        infographicUrl: url,
-        bgMode: 'infographic',
-      }));
+      updatedHero = { ...heroConfig, infographicUrl: url, bgMode: 'infographic' };
     }
+    setHeroConfig(updatedHero);
+    try {
+      localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(updatedHero));
+    } catch {}
+    const snapshot = getFullDatabaseSnapshot({ heroConfig: updatedHero });
+    syncDatabaseToCloud(snapshot);
   };
 
   const resetToDefaults = () => {
@@ -995,6 +1189,17 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem(STORAGE_KEYS.STORIES);
       localStorage.removeItem(STORAGE_KEYS.BOOK);
     } catch {}
+
+    const resetSnapshot = {
+      heroConfig: DEFAULT_HERO_CONFIG,
+      companyConfig: DEFAULT_COMPANY_CONFIG,
+      galleryItems: DEFAULT_GALLERY_ITEMS,
+      clientLogos: DEFAULT_CLIENT_LOGOS,
+      successStories: DEFAULT_SUCCESS_STORIES,
+      bookConfig: DEFAULT_BOOK_CONFIG,
+      lastUpdated: Date.now(),
+    };
+    syncDatabaseToCloud(resetSnapshot);
   };
 
   const exportConfigJson = (): string => {
@@ -1013,15 +1218,48 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importConfigJson = (jsonString: string): boolean => {
     try {
       const parsed = JSON.parse(jsonString);
-      if (parsed.heroConfig) setHeroConfig(parsed.heroConfig);
-      if (parsed.companyConfig) setCompanyConfig(parsed.companyConfig);
-      if (parsed.bookConfig) setBookConfig(parsed.bookConfig);
-      if (parsed.galleryItems && Array.isArray(parsed.galleryItems)) setGalleryItems(parsed.galleryItems);
-      if (parsed.clientLogos && Array.isArray(parsed.clientLogos)) setClientLogos(parsed.clientLogos);
-      if (parsed.successStories && Array.isArray(parsed.successStories)) setSuccessStories(parsed.successStories);
+      let updatedHero = heroConfig;
+      let updatedCompany = companyConfig;
+      let updatedBook = bookConfig;
+      let updatedGallery = galleryItems;
+      let updatedLogos = clientLogos;
+      let updatedStories = successStories;
+
+      if (parsed.heroConfig) { setHeroConfig(parsed.heroConfig); updatedHero = parsed.heroConfig; }
+      if (parsed.companyConfig) { setCompanyConfig(parsed.companyConfig); updatedCompany = parsed.companyConfig; }
+      if (parsed.bookConfig) { setBookConfig(parsed.bookConfig); updatedBook = parsed.bookConfig; }
+      if (parsed.galleryItems && Array.isArray(parsed.galleryItems)) { setGalleryItems(parsed.galleryItems); updatedGallery = parsed.galleryItems; }
+      if (parsed.clientLogos && Array.isArray(parsed.clientLogos)) { setClientLogos(parsed.clientLogos); updatedLogos = parsed.clientLogos; }
+      if (parsed.successStories && Array.isArray(parsed.successStories)) { setSuccessStories(parsed.successStories); updatedStories = parsed.successStories; }
+
+      const snapshot = {
+        heroConfig: updatedHero,
+        companyConfig: updatedCompany,
+        bookConfig: updatedBook,
+        galleryItems: updatedGallery,
+        clientLogos: updatedLogos,
+        successStories: updatedStories,
+        lastUpdated: Date.now(),
+      };
+      syncDatabaseToCloud(snapshot);
       return true;
     } catch (e) {
       console.error('Invalid JSON configuration', e);
+      return false;
+    }
+  };
+
+  const manualDatabaseSync = async (): Promise<boolean> => {
+    try {
+      lastLocalUpdateRef.current = 0;
+      const snapshot = getFullDatabaseSnapshot();
+      syncDatabaseToCloud(snapshot);
+      await fetchFromServer();
+      setLastDatabaseSync(new Date());
+      setIsDatabaseConnected(true);
+      return true;
+    } catch (err) {
+      console.error('Manual database sync error:', err);
       return false;
     }
   };
@@ -1034,6 +1272,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         galleryItems,
         clientLogos,
         successStories,
+        blogPosts,
         bookConfig,
         isAdminOpen,
         isAdminAuthenticated,
@@ -1052,6 +1291,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addSuccessStory,
         updateSuccessStory,
         deleteSuccessStory,
+        addBlogPost,
+        updateBlogPost,
+        deleteBlogPost,
         setMediaAsHero,
         resetToDefaults,
         exportConfigJson,
@@ -1062,6 +1304,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         uploadBookCoverToStorage,
         isDatabaseConnected,
         lastDatabaseSync,
+        manualDatabaseSync,
       }}
     >
       {children}

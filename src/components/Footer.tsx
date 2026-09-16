@@ -231,14 +231,14 @@ export const Footer: React.FC<FooterProps> = ({
             </ul>
           </div>
 
-          {/* Col 5: Founder's Book Highlight & Social Links */}
+          {/* Col 5: QMS Book Highlight & Social Links */}
           <div className="space-y-4">
             <div
               className={`text-xs font-mono font-bold uppercase tracking-wider ${
                 isDark ? 'text-white' : 'text-slate-900'
               }`}
             >
-              Founder's Masterwork
+              QMS Book Masterwork
             </div>
             
             <div
@@ -250,7 +250,7 @@ export const Footer: React.FC<FooterProps> = ({
             >
               <div className="flex items-center gap-2 text-amber-500 font-bold text-xs">
                 <BookOpen className="w-4 h-4" />
-                <span>"ISO 9000 Secret"</span>
+                <span>QMS Book & Playbook</span>
               </div>
               <p className={`text-[11px] leading-snug ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 By Julius N. Unlocking world markets for African enterprise through verifiable quality.
@@ -259,7 +259,7 @@ export const Footer: React.FC<FooterProps> = ({
                 onClick={() => onNavigate('#founder-book')}
                 className="text-[11px] font-bold text-cyan-600 hover:text-cyan-700 flex items-center gap-1"
               >
-                <span>Read Overview & Order</span>
+                <span>Read QMS Book Overview</span>
                 <ExternalLink className="w-3 h-3" />
               </button>
             </div>

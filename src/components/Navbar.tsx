@@ -41,13 +41,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navLinks = [
     { id: 'home', label: 'Home', href: '#home' },
-    { id: 'telemetry', label: 'Telemetry OS', href: '#telemetry' },
     { id: 'gallery', label: 'Media Gallery', href: '#gallery' },
     { id: 'about', label: 'About Us', href: '#about' },
     { id: 'services', label: 'Services', href: '#services' },
     { id: 'approach', label: 'Our Approach', href: '#approach' },
     { id: 'success-stories', label: 'Case Studies', href: '#success-stories' },
-    { id: 'founder-book', label: "Founder's Book", href: '#founder-book' },
+    { id: 'blog', label: 'Blog', href: '#blog' },
+    { id: 'founder-book', label: 'QMS Book', href: '#founder-book' },
   ];
 
 

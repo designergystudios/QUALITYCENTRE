@@ -21,17 +21,34 @@ fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 // Helper to sync state to live Supabase storage
 async function syncDatabaseToSupabase(data: any) {
   if (!SUPABASE_KEY) return;
+  const jsonBody = JSON.stringify(data, null, 2);
+  const headers = {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'x-upsert': 'true',
+    'cache-control': 'no-cache, no-store, must-revalidate',
+  };
+
   try {
-    await fetch(`${SUPABASE_URL}/storage/v1/object/client-logos/cms-database.json`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'x-upsert': 'true',
-      },
-      body: JSON.stringify(data, null, 2),
+    let res = await fetch(`${SUPABASE_URL}/storage/v1/object/client-logos/cms-database.json`, {
+      method: 'PUT',
+      headers,
+      body: jsonBody,
     });
+
+    if (!res.ok) {
+      res = await fetch(`${SUPABASE_URL}/storage/v1/object/client-logos/cms-database.json`, {
+        method: 'POST',
+        headers,
+        body: jsonBody,
+      });
+    }
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.warn('Background Supabase storage sync status:', res.status, txt);
+    }
   } catch (err) {
     console.warn('Background Supabase storage sync notice:', err);
   }
@@ -45,17 +62,26 @@ async function uploadImageToSupabase(
   bucket = 'client-logos'
 ): Promise<string | null> {
   if (!SUPABASE_KEY) return null;
+  const headers = {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': mimeType,
+    'x-upsert': 'true',
+    'cache-control': '3600',
+  };
   try {
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${filename}`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': mimeType,
-        'x-upsert': 'true',
-      },
+    let res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${filename}`, {
+      method: 'PUT',
+      headers,
       body: buffer,
     });
+    if (!res.ok) {
+      res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${filename}`, {
+        method: 'POST',
+        headers,
+        body: buffer,
+      });
+    }
     if (res.ok) {
       return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}?v=${Date.now()}`;
     } else {

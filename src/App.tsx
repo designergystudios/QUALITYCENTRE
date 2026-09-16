@@ -13,6 +13,7 @@ import { About } from './components/About';
 import { Services } from './components/Services';
 import { Approach } from './components/Approach';
 import { SuccessStories } from './components/SuccessStories';
+import { Blog } from './components/Blog';
 import { BookShowcase } from './components/BookShowcase';
 import { Footer } from './components/Footer';
 import { ConsultationModal } from './components/ConsultationModal';
@@ -53,6 +54,7 @@ export default function App() {
       'services',
       'approach',
       'success-stories',
+      'blog',
       'founder-book',
     ];
     
@@ -117,7 +119,10 @@ export default function App() {
         {/* 8. Success Stories & Case Studies */}
         <SuccessStories onOpenConsultation={(clientType) => handleOpenConsultation(clientType)} />
 
-        {/* 9. Founder Spotlight & Book Showcase ("ISO 9000 Secret: Unlocking World Markets" by Julius N.) */}
+        {/* 8.5. Thought Leadership & Industry Insights Blog Section */}
+        <Blog onOpenConsultation={(topic) => handleOpenConsultation(topic)} />
+
+        {/* 9. Founder Spotlight & Book Showcase ("QMS Book: Unlocking World Markets" by Julius N.) */}
         <BookShowcase onOpenConsultation={(topic) => handleOpenConsultation(topic)} />
       </main>
 

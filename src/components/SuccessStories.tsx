@@ -63,6 +63,51 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
   const modalImageInputRef = useRef<HTMLInputElement>(null);
   const modalPdfInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to flexibly render results (bullet items or paragraph/narrative text) across full container width
+  const renderResultsContent = (results: string[] | string) => {
+    let items: string[] = [];
+
+    if (Array.isArray(results)) {
+      items = results.filter((r) => typeof r === 'string' && r.trim().length > 0);
+    } else if (typeof results === 'string' && results.trim().length > 0) {
+      items = results
+        .split(/\n|;/)
+        .map((item) => item.replace(/^[-•*1-9.]+\s*/, '').trim())
+        .filter(Boolean);
+    }
+
+    if (items.length > 0) {
+      return (
+        <div className="space-y-2.5 w-full flex-1 flex flex-col justify-center">
+          {items.map((result, idx) => (
+            <div
+              key={idx}
+              className={`p-3.5 rounded-xl border flex items-start gap-3 w-full shadow-xs transition-all ${
+                isDark ? 'bg-slate-950/80 border-slate-800/90' : 'bg-white border-slate-200'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+              <span className={`text-xs sm:text-sm font-semibold leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                {result}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    const textContent = typeof results === 'string' ? results : '';
+    return (
+      <div className={`p-4 rounded-xl border w-full flex-1 flex items-center ${
+        isDark ? 'bg-slate-950/80 border-slate-800/90' : 'bg-white border-slate-200'
+      }`}>
+        <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+          {textContent || 'No specific outcomes recorded for this audit.'}
+        </p>
+      </div>
+    );
+  };
+
   if (!successStories || successStories.length === 0) return null;
 
   const currentStory = successStories.find((s) => s.id === selectedStoryId) || successStories[0];
@@ -377,8 +422,8 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                 </div>
 
                 {/* Right: Detailed Content */}
-                <div className="lg:col-span-7 p-8 sm:p-10 lg:p-12 flex flex-col justify-between space-y-8">
-                  <div className="space-y-6">
+                <div className="lg:col-span-7 p-8 sm:p-10 lg:p-12 flex flex-col justify-between space-y-8 min-h-full">
+                  <div className="space-y-6 flex-1 flex flex-col justify-between">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="space-y-1">
                         <span className="text-xs font-bold uppercase tracking-wider text-[#00A9CF]">
@@ -390,6 +435,19 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                       </div>
 
                       <div className="flex items-center gap-2 self-start sm:self-center">
+                        {currentStory.pdfUrl && (
+                          <a
+                            href={currentStory.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#00A9CF] text-slate-950 hover:bg-[#0096C7] transition-all flex items-center gap-1.5 shadow"
+                            title="Open attached PDF report in new tab"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>View PDF Report</span>
+                          </a>
+                        )}
+
                         <button
                           onClick={() => openEditModal(currentStory)}
                           className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-400 text-slate-950 hover:bg-amber-300 transition-all flex items-center gap-1.5 shadow"
@@ -397,16 +455,6 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           <span>Edit Story</span>
-                        </button>
-
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploading}
-                          className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#00A9CF]/15 text-[#00A9CF] hover:bg-[#00A9CF] hover:text-slate-950 border border-[#00A9CF]/30 transition-all flex items-center gap-1.5"
-                          title="Upload or replace PDF"
-                        >
-                          <FileUp className="w-3.5 h-3.5" />
-                          <span>{currentStory.pdfUrl ? 'PDF' : 'Upload PDF'}</span>
                         </button>
                       </div>
                     </div>
@@ -437,26 +485,22 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                       </div>
                     </div>
 
-                    {/* Key Results Bullet Points */}
-                    <div className="space-y-3 pt-2">
-                      <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                        <Award className="w-4 h-4 text-emerald-400" />
-                        Verified Results & Outcomes
-                      </h5>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {currentStory.results.map((result, idx) => (
-                          <div
-                            key={idx}
-                            className={`p-3.5 rounded-xl border flex items-start gap-2.5 shadow-sm ${
-                              isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200'
-                            }`}
-                          >
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                            <span className={`text-xs font-semibold leading-tight ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                              {result}
-                            </span>
-                          </div>
-                        ))}
+                    {/* Verified Results & Outcomes - Full width elastic container stretching to fill entire column */}
+                    <div className={`w-full flex-1 p-5 rounded-2xl border flex flex-col justify-between space-y-3 shadow-sm ${
+                      isDark ? 'bg-emerald-950/20 border-emerald-500/20' : 'bg-emerald-50/40 border-emerald-200/80'
+                    }`}>
+                      <div className="flex items-center justify-between gap-2 border-b border-emerald-500/15 pb-2.5">
+                        <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                          <Award className="w-4 h-4 text-emerald-400" />
+                          Verified Results & Outcomes
+                        </h5>
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          Audit Certified
+                        </span>
+                      </div>
+
+                      <div className="flex-1 flex flex-col justify-center w-full">
+                        {renderResultsContent(currentStory.results)}
                       </div>
                     </div>
                   </div>
@@ -477,69 +521,6 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                 </div>
               </div>
             </div>
-
-            {/* Embedded PDF Viewer Section */}
-            {currentStory.pdfUrl && (
-              <div className={`mt-8 p-6 sm:p-8 rounded-3xl border shadow-2xl space-y-4 transition-all ${
-                isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200'
-              }`}>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#00A9CF]/20 flex items-center justify-center text-[#00A9CF] flex-shrink-0">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-base font-bold text-white">
-                          {currentStory.pdfName || `${currentStory.clientName} Official PDF Document`}
-                        </h4>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                          Supabase Storage
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 truncate max-w-lg font-mono">
-                        {currentStory.pdfUrl}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <a
-                      href={currentStory.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#00A9CF] text-slate-950 hover:bg-[#0096C7] transition-all flex items-center gap-1.5 shadow"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Open PDF in Supabase</span>
-                    </a>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all flex items-center gap-1.5"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Replace</span>
-                    </button>
-                    <button
-                      onClick={handleRemovePdf}
-                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 transition-all flex items-center gap-1.5"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Embedded Iframe PDF Viewer */}
-                <div className="w-full h-[550px] sm:h-[650px] rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-inner relative">
-                  <iframe
-                    src={`${currentStory.pdfUrl}#toolbar=1`}
-                    title={currentStory.pdfName || `${currentStory.clientName} Case Study PDF`}
-                    className="w-full h-full border-0"
-                  />
-                </div>
-              </div>
-            )}
           </>
         )}
 
@@ -613,20 +594,15 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                       </div>
                     </div>
 
-                    {/* Results Checklist */}
-                    <div className="space-y-2">
+                    {/* Verified Results */}
+                    <div className={`p-4 rounded-xl border space-y-2.5 ${
+                      isDark ? 'bg-emerald-950/20 border-emerald-500/20' : 'bg-emerald-50/40 border-emerald-200/80'
+                    }`}>
                       <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                         <Award className="w-3.5 h-3.5" />
-                        Verified Results
+                        Verified Results & Outcomes
                       </div>
-                      <ul className="space-y-1.5">
-                        {story.results.map((res, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>{res}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      {renderResultsContent(story.results)}
                     </div>
                   </div>
                 </div>

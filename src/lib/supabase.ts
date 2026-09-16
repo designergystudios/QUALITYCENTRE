@@ -24,7 +24,8 @@ export async function fetchLiveDatabase() {
   try {
     const res = await fetch(`${LIVE_SUPABASE_DB_URL}?t=${Date.now()}`, {
       headers: {
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
       },
     });
     if (res.ok) {
@@ -49,6 +50,7 @@ export async function saveLiveDatabaseToSupabase(dbData: any) {
     const jsonString = JSON.stringify(payload, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
 
+    // 1. JS SDK upload with upsert
     const { error } = await supabase.storage
       .from('client-logos')
       .upload('cms-database.json', blob, {
@@ -57,9 +59,26 @@ export async function saveLiveDatabaseToSupabase(dbData: any) {
       });
 
     if (error) {
-      console.warn('Supabase storage upload notice:', error);
+      console.warn('Supabase JS SDK upload notice:', error);
+      // Fallback: direct REST API PUT call
+      try {
+        await fetch(`${SUPABASE_URL}/storage/v1/object/client-logos/cms-database.json`, {
+          method: 'PUT',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'x-upsert': 'true',
+            'cache-control': 'no-cache',
+          },
+          body: jsonString,
+        });
+      } catch (rawErr) {
+        console.warn('Supabase REST upload notice:', rawErr);
+      }
     }
-    // Always call server proxy endpoint to ensure local container disk stays updated
+
+    // 2. Always call server proxy endpoint to update server disk and perform background server sync
     await fetch('/api/cms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
