@@ -497,16 +497,23 @@ app.post('/api/success-stories', async (req: Request, res: Response) => {
     }
   }
 
-  const newStory = {
-    id: req.body.id || `story-${Date.now()}`,
+  const storyId = req.body.id || `story-${Date.now()}`;
+  const storyData = {
+    id: storyId,
     date: req.body.date || new Date().toISOString().split('T')[0],
     ...req.body,
     imageUrl: imageUrl,
   };
 
-  db.successStories = [newStory, ...(db.successStories || [])];
+  const existingIndex = (db.successStories || []).findIndex((item: any) => item.id === storyId);
+  if (existingIndex >= 0) {
+    db.successStories[existingIndex] = { ...db.successStories[existingIndex], ...storyData };
+  } else {
+    db.successStories = [storyData, ...(db.successStories || [])];
+  }
+
   writeDatabase(db);
-  res.json({ success: true, story: newStory, successStories: db.successStories });
+  res.json({ success: true, story: storyData, successStories: db.successStories });
 });
 
 app.delete('/api/success-stories/:id', (req: Request, res: Response) => {

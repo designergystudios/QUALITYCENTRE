@@ -280,6 +280,70 @@ const DEFAULT_SUCCESS_STORIES: SuccessStoryItem[] = [
     standard: 'ISO 14001 & ISO 45001',
     date: '2026-06-10',
   },
+  {
+    id: 'story-4',
+    clientName: 'East African Breweries (EABL)',
+    title: 'ISO 22000 Food Safety Management & HACCP Supply Chain Automation',
+    industry: 'Food, Beverage & Agriculture',
+    challenge: 'Ensuring zero food safety contamination risks across 3 regional breweries while satisfying stringent international export regulations.',
+    solution: 'Digitized raw material batch tracing, hazard analysis critical control points (HACCP), and automated SoftExpert hygiene audit logs.',
+    results: [
+      '100% compliance with global food safety standards',
+      '58% reduction in supplier audit cycle times',
+      'Zero product recall incidents across East Africa'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80',
+    standard: 'ISO 22000:2018 FSMS',
+    date: '2026-07-05',
+  },
+  {
+    id: 'story-5',
+    clientName: 'Equity Group Holdings',
+    title: 'Enterprise ISO 22301 Business Continuity & Operational Resilience',
+    industry: 'Banking & Financial Services',
+    challenge: 'Guaranteeing uninterrupted financial service delivery across 190+ branch networks and mobile banking nodes during regional system disruptions.',
+    solution: 'Established automated Business Impact Analysis (BIA) modeling, automated failover drills, and real-time executive crisis communication protocols.',
+    results: [
+      'Achieved sub-15 minute Recovery Time Objectives (RTO)',
+      'Tested 100% simulated disaster recovery scenarios',
+      'Full ISO 22301 BCMS certification'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+    standard: 'ISO 22301:2019 BCMS',
+    date: '2026-07-18',
+  },
+  {
+    id: 'story-6',
+    clientName: 'Kenya Airways (KQ)',
+    title: 'Aviation Quality & Safety Management System (SMS) Standardization',
+    industry: 'Aviation & Logistics',
+    challenge: 'Unifying ground operations, fleet maintenance, and flight safety audit compliance with ICAO/IATA standards and ISO 9001.',
+    solution: 'Implemented centralized non-conformance tracking (CAPA), digital aircraft maintenance checklists, and real-time risk scorecards.',
+    results: [
+      'Passed IATA Operational Safety Audit (IOSA) with distinction',
+      '48% faster CAPA closure rate',
+      'Streamlined cross-departmental QMS audits'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80',
+    standard: 'ISO 9001 & ICAO SMS',
+    date: '2026-08-02',
+  },
+  {
+    id: 'story-7',
+    clientName: 'Kenya Revenue Authority (KRA)',
+    title: 'ISO 37001 Anti-Bribery & ISO 27001 National Tax Telemetry Security',
+    industry: 'Public Sector & Governance',
+    challenge: 'Securing national tax revenue data infrastructure while enforcing transparent anti-bribery compliance controls across 8,000+ public staff.',
+    solution: 'Deployed PECB-certified Anti-Bribery Management Systems (ABMS) and end-to-end audit trail monitoring across all digital tax collection portals.',
+    results: [
+      'First East African revenue authority to earn ISO 37001 certification',
+      '100% staff compliance training completion',
+      'Audited 12+ million tax transaction records securely'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=1200&q=80',
+    standard: 'ISO 37001 & ISO 27001',
+    date: '2026-08-25',
+  },
 ];
 
 const STORAGE_KEYS = {
@@ -787,41 +851,99 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: tempId,
       date: new Date().toISOString().split('T')[0],
     };
-    setSuccessStories((prev) => [newStory, ...prev]);
+
+    setSuccessStories((prev) => {
+      const next = [newStory, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
 
     (async () => {
       let finalUrl = story.imageUrl;
       if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
         try {
           finalUrl = await uploadStoryImageToLiveStorage(finalUrl, story.clientName);
-          setSuccessStories((prev) =>
-            prev.map((item) => (item.id === tempId ? { ...item, imageUrl: finalUrl } : item))
-          );
+          setSuccessStories((prev) => {
+            const next = prev.map((item) => (item.id === tempId ? { ...item, imageUrl: finalUrl } : item));
+            try {
+              localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(next));
+            } catch (e) {}
+            return next;
+          });
         } catch (err) {
           console.warn('Direct Supabase story image upload notice:', err);
         }
       }
 
       try {
-        fetch('/api/success-stories', {
+        const res = await fetch('/api/success-stories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...newStory, imageUrl: finalUrl }),
-        }).catch(() => {});
-      } catch (e) {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.successStories) && data.successStories.length > 0) {
+            setSuccessStories(data.successStories);
+            try {
+              localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(data.successStories));
+            } catch (e) {}
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to publish success story to database API:', e);
+      }
     })();
 
     return newStory;
   };
 
   const updateSuccessStory = (id: string, updates: Partial<SuccessStoryItem>) => {
-    setSuccessStories((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    );
+    let updatedStory: SuccessStoryItem | undefined;
+
+    setSuccessStories((prev) => {
+      const next = prev.map((item) => {
+        if (item.id === id) {
+          updatedStory = { ...item, ...updates };
+          return updatedStory;
+        }
+        return item;
+      });
+      try {
+        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
+    if (updatedStory) {
+      fetch('/api/success-stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedStory),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data.successStories) && data.successStories.length > 0) {
+            setSuccessStories(data.successStories);
+            try {
+              localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(data.successStories));
+            } catch (e) {}
+          }
+        })
+        .catch((e) => console.warn('Failed to sync updated story to backend API:', e));
+    }
   };
 
   const deleteSuccessStory = (id: string) => {
-    setSuccessStories((prev) => prev.filter((item) => item.id !== id));
+    setSuccessStories((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
     fetch(`/api/success-stories/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 

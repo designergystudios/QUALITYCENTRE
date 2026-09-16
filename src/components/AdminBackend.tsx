@@ -27,9 +27,12 @@ import {
   Database,
   ShieldCheck,
   BookOpen,
+  FileText,
+  FileCheck,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useCms, GalleryItem } from '../context/CmsContext';
+import { uploadPdfToLiveStorage } from '../lib/supabase';
 
 export const AdminBackend: React.FC = () => {
   const { isDark } = useTheme();
@@ -108,7 +111,10 @@ export const AdminBackend: React.FC = () => {
   const [storyResults, setStoryResults] = useState('');
   const [storyStandard, setStoryStandard] = useState('');
   const [storyImageUrl, setStoryImageUrl] = useState('');
+  const [storyPdfUrl, setStoryPdfUrl] = useState('');
+  const [storyPdfName, setStoryPdfName] = useState('');
   const storyImageInputRef = useRef<HTMLInputElement>(null);
+  const storyPdfInputRef = useRef<HTMLInputElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const heroVideoInputRef = useRef<HTMLInputElement>(null);
@@ -198,6 +204,37 @@ export const AdminBackend: React.FC = () => {
     }
   };
 
+  const handleStoryPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadError('Please select a valid PDF document (.pdf).');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(25);
+    setUploadingFileName(file.name);
+    setUploadError(null);
+
+    try {
+      setUploadProgress(60);
+      const publicUrl = await uploadPdfToLiveStorage(file, storyClientName || file.name);
+      setUploadProgress(100);
+      setStoryPdfUrl(publicUrl);
+      setStoryPdfName(file.name);
+      setIsUploading(false);
+      setUploadingFileName(null);
+      showToast(`Case study PDF "${file.name}" uploaded to Supabase Storage!`);
+    } catch (err: any) {
+      console.error('Supabase story PDF upload error:', err);
+      setIsUploading(false);
+      setUploadingFileName(null);
+      setUploadError('Failed to upload PDF: ' + (err?.message || 'Check network connection'));
+    }
+  };
+
   const handleBookCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -254,6 +291,8 @@ export const AdminBackend: React.FC = () => {
       results: resultsArray,
       imageUrl: storyImageUrl,
       standard: storyStandard || 'ISO 9001:2015',
+      pdfUrl: storyPdfUrl || undefined,
+      pdfName: storyPdfName || undefined,
     });
 
     setStoryClientName('');
@@ -264,8 +303,10 @@ export const AdminBackend: React.FC = () => {
     setStoryResults('');
     setStoryStandard('');
     setStoryImageUrl('');
+    setStoryPdfUrl('');
+    setStoryPdfName('');
     setUploadError(null);
-    showToast('Success story added to database successfully!');
+    showToast('Success story published to database! View live preview on front end.');
   };
 
   const handleAddClientLogo = async (e: React.FormEvent) => {
@@ -1559,6 +1600,43 @@ USING (bucket_id = 'client-logos');`}
                         </div>
                       )}
 
+                      {/* Case Study PDF Document Attachment */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Attach Case Study PDF Report (Optional - Upload to Supabase)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            ref={storyPdfInputRef}
+                            onChange={handleStoryPdfUpload}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => storyPdfInputRef.current?.click()}
+                            className="py-2.5 px-4 rounded-xl border border-dashed border-slate-700 hover:border-[#00A9CF] bg-slate-950 text-xs font-bold text-slate-300 flex items-center gap-2"
+                          >
+                            <FileText className="w-4 h-4 text-[#00A9CF]" />
+                            <span>Upload Case Study PDF...</span>
+                          </button>
+                          <input
+                            type="url"
+                            value={storyPdfUrl}
+                            onChange={(e) => setStoryPdfUrl(e.target.value)}
+                            placeholder="Or paste Supabase PDF URL..."
+                            className="flex-1 px-3.5 py-2.5 rounded-xl border text-xs font-mono bg-slate-950 border-slate-700 text-white"
+                          />
+                        </div>
+                        {storyPdfUrl && (
+                          <div className="mt-2 text-[11px] font-mono text-cyan-400 flex items-center gap-2">
+                            <FileCheck className="w-3.5 h-3.5" />
+                            <span>PDF attached: {storyPdfName || storyPdfUrl}</span>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs font-bold text-slate-300 mb-1">
@@ -1628,31 +1706,66 @@ USING (bucket_id = 'client-logos');`}
                                 <img src={story.imageUrl} alt={story.clientName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               </div>
                               <div className="space-y-1">
-                                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00A9CF]/20 text-[#00A9CF] border border-[#00A9CF]/30">
-                                  {story.standard}
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00A9CF]/20 text-[#00A9CF] border border-[#00A9CF]/30">
+                                    {story.standard}
+                                  </span>
+                                  {story.pdfUrl && (
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                      <FileCheck className="w-3 h-3" />
+                                      PDF Attached
+                                    </span>
+                                  )}
                                 </div>
                                 <h5 className="text-sm font-bold text-white">{story.title}</h5>
                                 <div className="text-xs text-slate-300">{story.clientName} ({story.industry})</div>
                               </div>
                             </div>
 
-                            <button
-                              onClick={() => {
-                                if (confirm(`Delete success story for "${story.clientName}"?`)) {
-                                  deleteSuccessStory(story.id);
-                                  showToast('Success story removed from database');
-                                }
-                              }}
-                              className="p-2 text-slate-300 hover:text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-                              title="Delete story"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  closeAdmin();
+                                  setTimeout(() => {
+                                    const el = document.getElementById('case-studies') || document.getElementById('success-stories');
+                                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                  }, 100);
+                                }}
+                                className="px-3 py-1.5 text-xs font-bold text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] rounded-lg transition-colors flex items-center gap-1.5"
+                                title="Close Admin & View Preview on Front End"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Preview Live</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Delete success story for "${story.clientName}"?`)) {
+                                    deleteSuccessStory(story.id);
+                                    showToast('Success story removed from database');
+                                  }
+                                }}
+                                className="p-2 text-slate-300 hover:text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                                title="Delete story"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
 
-                          <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono">
-                            <span className="text-slate-400">Database Image URL:</span>
-                            <span className="text-sky-300 truncate max-w-md select-all">{story.imageUrl}</span>
+                          <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between text-[11px] font-mono gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400">Database Image URL:</span>
+                              <span className="text-sky-300 truncate max-w-xs select-all">{story.imageUrl}</span>
+                            </div>
+                            {story.pdfUrl && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400">PDF Report:</span>
+                                <a href={story.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline truncate max-w-xs">
+                                  {story.pdfName || 'Download PDF'}
+                                </a>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
