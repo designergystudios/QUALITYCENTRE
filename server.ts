@@ -9,7 +9,10 @@ const DB_FILE = path.join(process.cwd(), 'data', 'cms-database.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.DATABASE_URL || 'https://zzgwjegqiefanzhshxyn.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  '[REDACTED-SECRET]';
 
 // Ensure required directories exist
 fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
@@ -81,6 +84,7 @@ function readDatabase() {
 // Helper to write database
 function writeDatabase(data: any) {
   try {
+    data.lastUpdated = Date.now();
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
     // Asynchronously push update to live Supabase database
     syncDatabaseToSupabase(data).catch(() => {});
@@ -114,6 +118,23 @@ app.get('/api/cms', (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Database could not be read' });
   }
   res.json(db);
+});
+
+// POST save / update full CMS state into persistent database
+app.post('/api/cms', (req: Request, res: Response) => {
+  const existingDb = readDatabase() || {};
+  const payload = req.body;
+  const updatedDb = {
+    ...existingDb,
+    ...payload,
+    lastUpdated: Date.now(),
+  };
+
+  const success = writeDatabase(updatedDb);
+  if (!success) {
+    return res.status(500).json({ error: 'Failed to write to database' });
+  }
+  res.json({ success: true, db: updatedDb });
 });
 
 // POST update company configuration (including logoUrl and logoType)

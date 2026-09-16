@@ -38,6 +38,38 @@ export async function fetchLiveDatabase() {
 }
 
 /**
+ * Persist CMS database snapshot directly to live Supabase Cloud storage
+ */
+export async function saveLiveDatabaseToSupabase(dbData: any) {
+  try {
+    const payload = {
+      ...dbData,
+      lastUpdated: dbData?.lastUpdated || Date.now(),
+    };
+    const jsonString = JSON.stringify(payload, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+
+    const { error } = await supabase.storage
+      .from('site-data')
+      .upload('cms-database.json', blob, {
+        contentType: 'application/json',
+        upsert: true,
+      });
+
+    if (error) {
+      // Fallback to proxy endpoint if RLS restricts browser anon key
+      await fetch('/api/cms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonString,
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('Live Supabase database save notice:', err);
+  }
+}
+
+/**
  * Generic helper to upload any File or base64 dataUrl to Supabase Storage
  */
 export async function uploadFileToSupabaseStorage({

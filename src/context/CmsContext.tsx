@@ -6,6 +6,7 @@ import {
   LIVE_SUPABASE_LOGO_URL,
   LIVE_SUPABASE_DB_URL,
   fetchLiveDatabase,
+  saveLiveDatabaseToSupabase,
   uploadLogoToLiveStorage,
   uploadClientLogoToLiveStorage,
   uploadStoryImageToLiveStorage,
@@ -450,57 +451,13 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Fetch full state from backend persistent server database and live Supabase cloud database
   const fetchFromServer = async () => {
-    let synced = false;
+    let latestData: any = null;
 
     // 1. Fetch directly from live Supabase Cloud Database (global source of truth across all devices)
     try {
       const supabaseDb = await fetchLiveDatabase();
       if (supabaseDb) {
-        setIsDatabaseConnected(true);
-        setLastDatabaseSync(new Date());
-        synced = true;
-
-        if (supabaseDb.companyConfig) {
-          const cfg: CompanyConfig = { ...supabaseDb.companyConfig };
-          if (!cfg.logoUrl || cfg.logoUrl.startsWith('/uploads/') || cfg.logoUrl === '') {
-            cfg.logoUrl = LIVE_SUPABASE_LOGO_URL;
-            cfg.logoType = 'custom';
-          }
-          setCompanyConfig(cfg);
-          try {
-            localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(cfg));
-          } catch {}
-        }
-        if (supabaseDb.heroConfig) {
-          setHeroConfig(supabaseDb.heroConfig);
-          try {
-            localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(supabaseDb.heroConfig));
-          } catch {}
-        }
-        if (Array.isArray(supabaseDb.clientLogos) && supabaseDb.clientLogos.length > 0) {
-          setClientLogos(supabaseDb.clientLogos);
-          try {
-            localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(supabaseDb.clientLogos));
-          } catch {}
-        }
-        if (Array.isArray(supabaseDb.successStories) && supabaseDb.successStories.length > 0) {
-          setSuccessStories(supabaseDb.successStories);
-          try {
-            localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(supabaseDb.successStories));
-          } catch {}
-        }
-        if (Array.isArray(supabaseDb.galleryItems) && supabaseDb.galleryItems.length > 0) {
-          setGalleryItems(supabaseDb.galleryItems);
-          try {
-            localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(supabaseDb.galleryItems));
-          } catch {}
-        }
-        if (supabaseDb.bookConfig) {
-          setBookConfig(supabaseDb.bookConfig);
-          try {
-            localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(supabaseDb.bookConfig));
-          } catch {}
-        }
+        latestData = supabaseDb;
       }
     } catch (err) {
       console.warn('Supabase cloud database check notice:', err);
@@ -510,38 +467,69 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await fetch('/api/cms');
       if (res.ok) {
-        const data = await res.json();
-        setIsDatabaseConnected(true);
-        setLastDatabaseSync(new Date());
-        synced = true;
-
-        if (data.companyConfig) {
-          const cfg: CompanyConfig = { ...data.companyConfig };
-          if (!cfg.logoUrl || cfg.logoUrl.startsWith('/uploads/') || cfg.logoUrl === '') {
-            cfg.logoUrl = LIVE_SUPABASE_LOGO_URL;
-            cfg.logoType = 'custom';
+        const apiData = await res.json();
+        if (apiData) {
+          if (!latestData) {
+            latestData = apiData;
+          } else {
+            const supabaseTime = Number(latestData.lastUpdated || 0);
+            const apiTime = Number(apiData.lastUpdated || 0);
+            if (apiTime >= supabaseTime) {
+              latestData = apiData;
+            }
           }
-          setCompanyConfig(cfg);
-          try {
-            localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(cfg));
-          } catch {}
-        }
-        if (data.heroConfig) setHeroConfig(data.heroConfig);
-        if (Array.isArray(data.clientLogos) && data.clientLogos.length > 0) setClientLogos(data.clientLogos);
-        if (Array.isArray(data.successStories) && data.successStories.length > 0) setSuccessStories(data.successStories);
-        if (Array.isArray(data.galleryItems) && data.galleryItems.length > 0) setGalleryItems(data.galleryItems);
-        if (data.bookConfig) {
-          setBookConfig(data.bookConfig);
-          try {
-            localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(data.bookConfig));
-          } catch {}
         }
       }
     } catch (err) {
-      // /api/cms is optional when using direct Supabase cloud database
+      // /api/cms notice
     }
 
-    if (!synced) {
+    if (latestData) {
+      setIsDatabaseConnected(true);
+      setLastDatabaseSync(new Date());
+
+      if (latestData.companyConfig) {
+        const cfg: CompanyConfig = { ...latestData.companyConfig };
+        if (!cfg.logoUrl || cfg.logoUrl.startsWith('/uploads/') || cfg.logoUrl === '') {
+          cfg.logoUrl = LIVE_SUPABASE_LOGO_URL;
+          cfg.logoType = 'custom';
+        }
+        setCompanyConfig(cfg);
+        try {
+          localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(cfg));
+        } catch {}
+      }
+      if (latestData.heroConfig) {
+        setHeroConfig(latestData.heroConfig);
+        try {
+          localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(latestData.heroConfig));
+        } catch {}
+      }
+      if (Array.isArray(latestData.clientLogos) && latestData.clientLogos.length > 0) {
+        setClientLogos(latestData.clientLogos);
+        try {
+          localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(latestData.clientLogos));
+        } catch {}
+      }
+      if (Array.isArray(latestData.successStories) && latestData.successStories.length > 0) {
+        setSuccessStories(latestData.successStories);
+        try {
+          localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(latestData.successStories));
+        } catch {}
+      }
+      if (Array.isArray(latestData.galleryItems) && latestData.galleryItems.length > 0) {
+        setGalleryItems(latestData.galleryItems);
+        try {
+          localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(latestData.galleryItems));
+        } catch {}
+      }
+      if (latestData.bookConfig) {
+        setBookConfig(latestData.bookConfig);
+        try {
+          localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(latestData.bookConfig));
+        } catch {}
+      }
+    } else {
       setIsDatabaseConnected(false);
     }
   };
@@ -549,7 +537,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Synchronize on mount, on window focus, and on interval so all devices stay updated in real time
   useEffect(() => {
     fetchFromServer();
-    const interval = setInterval(fetchFromServer, 10000);
+    const interval = setInterval(fetchFromServer, 4000);
     const onFocus = () => fetchFromServer();
     window.addEventListener('focus', onFocus);
     return () => {
@@ -852,12 +840,14 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: new Date().toISOString().split('T')[0],
     };
 
+    let nextStories: SuccessStoryItem[] = [];
+
     setSuccessStories((prev) => {
-      const next = [newStory, ...prev];
+      nextStories = [newStory, ...prev];
       try {
-        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(next));
+        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(nextStories));
       } catch (e) {}
-      return next;
+      return nextStories;
     });
 
     (async () => {
@@ -877,11 +867,13 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
+      const updatedStoryItem = { ...newStory, imageUrl: finalUrl };
+
       try {
         const res = await fetch('/api/success-stories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...newStory, imageUrl: finalUrl }),
+          body: JSON.stringify(updatedStoryItem),
         });
         if (res.ok) {
           const data = await res.json();
@@ -895,16 +887,28 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (e) {
         console.warn('Failed to publish success story to database API:', e);
       }
+
+      // Persist full database snapshot directly to live Supabase Cloud database
+      saveLiveDatabaseToSupabase({
+        heroConfig,
+        companyConfig,
+        galleryItems,
+        clientLogos,
+        successStories: [updatedStoryItem, ...successStories.filter((s) => s.id !== tempId)],
+        bookConfig,
+        lastUpdated: Date.now(),
+      }).catch(() => {});
     })();
 
     return newStory;
   };
 
   const updateSuccessStory = (id: string, updates: Partial<SuccessStoryItem>) => {
+    let nextStories: SuccessStoryItem[] = [];
     let updatedStory: SuccessStoryItem | undefined;
 
     setSuccessStories((prev) => {
-      const next = prev.map((item) => {
+      nextStories = prev.map((item) => {
         if (item.id === id) {
           updatedStory = { ...item, ...updates };
           return updatedStory;
@@ -912,9 +916,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return item;
       });
       try {
-        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(next));
+        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(nextStories));
       } catch (e) {}
-      return next;
+      return nextStories;
     });
 
     if (updatedStory) {
@@ -933,18 +937,42 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         })
         .catch((e) => console.warn('Failed to sync updated story to backend API:', e));
+
+      // Persist full database snapshot directly to live Supabase Cloud database
+      saveLiveDatabaseToSupabase({
+        heroConfig,
+        companyConfig,
+        galleryItems,
+        clientLogos,
+        successStories: nextStories,
+        bookConfig,
+        lastUpdated: Date.now(),
+      }).catch(() => {});
     }
   };
 
   const deleteSuccessStory = (id: string) => {
+    let nextStories: SuccessStoryItem[] = [];
     setSuccessStories((prev) => {
-      const next = prev.filter((item) => item.id !== id);
+      nextStories = prev.filter((item) => item.id !== id);
       try {
-        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(next));
+        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(nextStories));
       } catch (e) {}
-      return next;
+      return nextStories;
     });
+
     fetch(`/api/success-stories/${id}`, { method: 'DELETE' }).catch(() => {});
+
+    // Persist full database snapshot directly to live Supabase Cloud database
+    saveLiveDatabaseToSupabase({
+      heroConfig,
+      companyConfig,
+      galleryItems,
+      clientLogos,
+      successStories: nextStories,
+      bookConfig,
+      lastUpdated: Date.now(),
+    }).catch(() => {});
   };
 
   const setMediaAsHero = (type: 'video' | 'infographic', url: string) => {
