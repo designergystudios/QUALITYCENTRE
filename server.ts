@@ -125,6 +125,14 @@ function writeDatabase(data: any) {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Disable browser & proxy caching for all API endpoints
+app.use('/api', (req: Request, res: Response, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Serve public uploads directory statically so uploaded logos are accessible to all devices
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.static(path.join(process.cwd(), 'public')));

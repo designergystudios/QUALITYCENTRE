@@ -469,95 +469,18 @@ Top 3 Tips for a First-Attempt Pass:
 ];
 
 const STORAGE_KEYS = {
-  HERO: 'qc_cms_hero_v1',
-  COMPANY: 'qc_cms_company_v1',
-  GALLERY: 'qc_cms_gallery_v1',
-  LOGOS: 'qc_cms_logos_v1',
-  STORIES: 'qc_cms_stories_v1',
-  BOOK: 'qc_cms_book_v1',
   AUTH: 'qc_cms_admin_auth_v1',
 };
 
 const CmsContext = createContext<CmsContextType | undefined>(undefined);
 
 export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [heroConfig, setHeroConfig] = useState<HeroConfig>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.HERO);
-      if (saved) return { ...DEFAULT_HERO_CONFIG, ...JSON.parse(saved) };
-    } catch (e) {
-      console.warn('Failed to load hero config from localStorage', e);
-    }
-    return DEFAULT_HERO_CONFIG;
-  });
-
-  const [companyConfig, setCompanyConfig] = useState<CompanyConfig>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.COMPANY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // If saved in localStorage has an outdated relative path or empty logo, upgrade to live Supabase URL
-        if (!parsed.logoUrl || parsed.logoUrl.startsWith('/uploads/') || parsed.logoUrl === '') {
-          parsed.logoUrl = LIVE_SUPABASE_LOGO_URL;
-          parsed.logoType = 'custom';
-        }
-        return { ...DEFAULT_COMPANY_CONFIG, ...parsed };
-      }
-    } catch (e) {
-      console.warn('Failed to load company config from localStorage', e);
-    }
-    return DEFAULT_COMPANY_CONFIG;
-  });
-
-  const [bookConfig, setBookConfig] = useState<FounderBook>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.BOOK);
-      if (saved) return { ...DEFAULT_BOOK_CONFIG, ...JSON.parse(saved) };
-    } catch (e) {
-      console.warn('Failed to load book config from localStorage', e);
-    }
-    return DEFAULT_BOOK_CONFIG;
-  });
-
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.GALLERY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.warn('Failed to load gallery items from localStorage', e);
-    }
-    return DEFAULT_GALLERY_ITEMS;
-  });
-
-  const [clientLogos, setClientLogos] = useState<ClientLogoItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.LOGOS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.warn('Failed to load client logos from localStorage', e);
-    }
-    return DEFAULT_CLIENT_LOGOS;
-  });
-
-  const [successStories, setSuccessStories] = useState<SuccessStoryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.STORIES);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.warn('Failed to load success stories from localStorage', e);
-    }
-    return DEFAULT_SUCCESS_STORIES;
-  });
-
+  const [heroConfig, setHeroConfig] = useState<HeroConfig>(DEFAULT_HERO_CONFIG);
+  const [companyConfig, setCompanyConfig] = useState<CompanyConfig>(DEFAULT_COMPANY_CONFIG);
+  const [bookConfig, setBookConfig] = useState<FounderBook>(DEFAULT_BOOK_CONFIG);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(DEFAULT_GALLERY_ITEMS);
+  const [clientLogos, setClientLogos] = useState<ClientLogoItem[]>(DEFAULT_CLIENT_LOGOS);
+  const [successStories, setSuccessStories] = useState<SuccessStoryItem[]>(DEFAULT_SUCCESS_STORIES);
   const [blogPosts, setBlogPosts] = useState<BlogPostItem[]>(DEFAULT_BLOG_POSTS);
 
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
@@ -659,27 +582,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           cfg.logoType = 'custom';
         }
         setCompanyConfig(cfg);
-        try {
-          localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(cfg));
-        } catch {}
       }
       if (latestData.heroConfig) {
         setHeroConfig(latestData.heroConfig);
-        try {
-          localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(latestData.heroConfig));
-        } catch {}
       }
       if (Array.isArray(latestData.clientLogos)) {
         setClientLogos(latestData.clientLogos);
-        try {
-          localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(latestData.clientLogos));
-        } catch {}
       }
       if (Array.isArray(latestData.successStories)) {
         setSuccessStories(latestData.successStories);
-        try {
-          localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(latestData.successStories));
-        } catch {}
       }
       if (Array.isArray(latestData.galleryItems)) {
         setGalleryItems(latestData.galleryItems);
@@ -697,8 +608,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Synchronize on mount, on window focus, and on interval so all devices stay updated in real time
   useEffect(() => {
+    // Purge legacy local storage cache items on startup to ensure 100% database authority
+    try {
+      ['qc_cms_hero_v1', 'qc_cms_company_v1', 'qc_cms_gallery_v1', 'qc_cms_logos_v1', 'qc_cms_stories_v1', 'qc_cms_book_v1'].forEach((k) => {
+        localStorage.removeItem(k);
+      });
+    } catch {}
+
     fetchFromServer();
-    const interval = setInterval(fetchFromServer, 4000);
+    const interval = setInterval(fetchFromServer, 3000);
     const onFocus = () => fetchFromServer();
     window.addEventListener('focus', onFocus);
     return () => {
@@ -707,66 +625,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Persist hero config changes to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(heroConfig));
-    } catch (e) {
-      console.warn('Failed to save hero config', e);
-    }
-  }, [heroConfig]);
-
-  // Persist company config changes to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(companyConfig));
-    } catch (e) {
-      console.warn('Failed to save company config', e);
-    }
-  }, [companyConfig]);
-
-  // Persist book config
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(bookConfig));
-    } catch (e) {
-      console.warn('Failed to save book config', e);
-    }
-  }, [bookConfig]);
-
-  // Persist gallery items
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(galleryItems));
-    } catch (e) {
-      console.warn('Failed to save gallery items', e);
-    }
-  }, [galleryItems]);
-
-  // Persist client logos
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(clientLogos));
-    } catch (e) {
-      console.warn('Failed to save client logos', e);
-    }
-  }, [clientLogos]);
-
-  // Persist success stories
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(successStories));
-    } catch (e) {
-      console.warn('Failed to save success stories', e);
-    }
-  }, [successStories]);
-
   const openAdmin = () => setIsAdminOpen(true);
   const closeAdmin = () => setIsAdminOpen(false);
 
   const loginAdmin = (username: string, password: string): boolean => {
     const cleanUser = username.trim().toLowerCase();
-    // Enforce username: admin and password: Qckenya@2026!
     if (
       (cleanUser === 'admin' && password === 'Qckenya@2026!') ||
       password === 'Qckenya@2026!' ||
@@ -791,9 +654,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateHeroConfig = (updates: Partial<HeroConfig>) => {
     const updated = { ...heroConfig, ...updates };
     setHeroConfig(updated);
-    try {
-      localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(updated));
-    } catch {}
     const snapshot = getFullDatabaseSnapshot({ heroConfig: updated });
     syncDatabaseToCloud(snapshot);
     fetch('/api/hero', {
@@ -806,9 +666,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateCompanyConfig = (updates: Partial<CompanyConfig>) => {
     const updated = { ...companyConfig, ...updates };
     setCompanyConfig(updated);
-    try {
-      localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(updated));
-    } catch {}
     const snapshot = getFullDatabaseSnapshot({ companyConfig: updated });
     syncDatabaseToCloud(snapshot);
     fetch('/api/company', {
@@ -821,9 +678,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBookConfig = (updates: Partial<FounderBook>) => {
     const updated = { ...bookConfig, ...updates };
     setBookConfig(updated);
-    try {
-      localStorage.setItem(STORAGE_KEYS.BOOK, JSON.stringify(updated));
-    } catch {}
     const snapshot = getFullDatabaseSnapshot({ bookConfig: updated });
     syncDatabaseToCloud(snapshot);
     fetch('/api/book', {
@@ -890,9 +744,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updated: CompanyConfig = { ...companyConfig, logoUrl: cloudUrl, logoType: 'custom' };
     setCompanyConfig(updated);
-    try {
-      localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(updated));
-    } catch {}
 
     const snapshot = getFullDatabaseSnapshot({ companyConfig: updated });
     syncDatabaseToCloud(snapshot);
@@ -918,9 +769,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let updatedList: GalleryItem[] = [];
     setGalleryItems((prev) => {
       updatedList = [newItem, ...prev];
-      try {
-        localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(updatedList));
-      } catch {}
       return updatedList;
     });
 
@@ -939,9 +787,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let updatedList: GalleryItem[] = [];
     setGalleryItems((prev) => {
       updatedList = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
-      try {
-        localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(updatedList));
-      } catch {}
       return updatedList;
     });
 
@@ -953,9 +798,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let updatedList: GalleryItem[] = [];
     setGalleryItems((prev) => {
       updatedList = prev.filter((item) => item.id !== id);
-      try {
-        localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(updatedList));
-      } catch {}
       return updatedList;
     });
 
@@ -982,9 +824,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let updatedList: ClientLogoItem[] = [];
     setClientLogos((prev) => {
       updatedList = [newLogo, ...prev];
-      try {
-        localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(updatedList));
-      } catch {}
       return updatedList;
     });
 
@@ -999,9 +838,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           let listWithLogo: ClientLogoItem[] = [];
           setClientLogos((prev) => {
             listWithLogo = prev.map((item) => (item.id === tempId ? { ...item, logoUrl: finalUrl } : item));
-            try {
-              localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(listWithLogo));
-            } catch {}
             return listWithLogo;
           });
           syncDatabaseToCloud(getFullDatabaseSnapshot({ clientLogos: listWithLogo }));
@@ -1024,9 +860,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let updatedList: ClientLogoItem[] = [];
     setClientLogos((prev) => {
       updatedList = prev.filter((item) => item.id !== id);
-      try {
-        localStorage.setItem(STORAGE_KEYS.LOGOS, JSON.stringify(updatedList));
-      } catch {}
       return updatedList;
     });
 
@@ -1048,9 +881,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setSuccessStories((prev) => {
       updatedList = [newStory, ...prev];
-      try {
-        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(updatedList));
-      } catch (e) {}
       return updatedList;
     });
 
@@ -1064,9 +894,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           let listWithImage: SuccessStoryItem[] = [];
           setSuccessStories((prev) => {
             listWithImage = prev.map((item) => (item.id === tempId ? { ...item, imageUrl: finalUrl } : item));
-            try {
-              localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(listWithImage));
-            } catch (e) {}
             return listWithImage;
           });
           syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: listWithImage }));
@@ -1097,9 +924,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return item;
       });
-      try {
-        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(nextStories));
-      } catch (e) {}
       return nextStories;
     });
 
@@ -1167,9 +991,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedHero = { ...heroConfig, infographicUrl: url, bgMode: 'infographic' };
     }
     setHeroConfig(updatedHero);
-    try {
-      localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(updatedHero));
-    } catch {}
     const snapshot = getFullDatabaseSnapshot({ heroConfig: updatedHero });
     syncDatabaseToCloud(snapshot);
   };
@@ -1182,12 +1003,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSuccessStories(DEFAULT_SUCCESS_STORIES);
     setBookConfig(DEFAULT_BOOK_CONFIG);
     try {
-      localStorage.removeItem(STORAGE_KEYS.HERO);
-      localStorage.removeItem(STORAGE_KEYS.COMPANY);
-      localStorage.removeItem(STORAGE_KEYS.GALLERY);
-      localStorage.removeItem(STORAGE_KEYS.LOGOS);
-      localStorage.removeItem(STORAGE_KEYS.STORIES);
-      localStorage.removeItem(STORAGE_KEYS.BOOK);
+      ['qc_cms_hero_v1', 'qc_cms_company_v1', 'qc_cms_gallery_v1', 'qc_cms_logos_v1', 'qc_cms_stories_v1', 'qc_cms_book_v1'].forEach((k) => {
+        localStorage.removeItem(k);
+      });
     } catch {}
 
     const resetSnapshot = {
