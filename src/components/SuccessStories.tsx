@@ -29,10 +29,11 @@ import {
   LayoutGrid,
   X,
   Save,
+  Plus,
 } from 'lucide-react';
 
 export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => void }> = ({ onOpenConsultation }) => {
-  const { successStories, updateSuccessStory } = useCms();
+  const { successStories, updateSuccessStory, addSuccessStory } = useCms();
   const { isDark } = useTheme();
   const [selectedStoryId, setSelectedStoryId] = useState<string>(successStories[0]?.id || '');
   const [viewMode, setViewMode] = useState<'tab' | 'grid'>('tab');
@@ -42,8 +43,10 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Edit Story Modal State
+  // Edit / Add Story Modal State
   const [editingStory, setEditingStory] = useState<SuccessStoryItem | null>(null);
+  const [isAddingNewStory, setIsAddingNewStory] = useState(false);
+
   const [editClientName, setEditClientName] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
@@ -106,8 +109,36 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
     }
   };
 
+  // Open Add New Case Study Modal
+  const openAddNewModal = () => {
+    setIsAddingNewStory(true);
+    setEditingStory({
+      id: 'new',
+      clientName: '',
+      title: '',
+      industry: 'Banking & Finance',
+      standard: 'ISO 9001:2015',
+      challenge: 'Multi-site compliance audit preparation & operational standard implementation.',
+      solution: 'Deployed ISO Quality Centre automated control frameworks and staff training.',
+      results: ['100% audit pass rate achieved', 'Zero non-conformities found'],
+      imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+      date: new Date().toISOString().split('T')[0],
+    });
+    setEditClientName('');
+    setEditTitle('');
+    setEditIndustry('Banking & Finance');
+    setEditStandard('ISO 9001:2015');
+    setEditChallenge('');
+    setEditSolution('');
+    setEditResults('100% audit pass rate achieved\nZero non-conformities found');
+    setEditImageUrl('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80');
+    setEditPdfUrl('');
+    setEditPdfName('');
+  };
+
   // Open Edit Story Modal
   const openEditModal = (story: SuccessStoryItem) => {
+    setIsAddingNewStory(false);
     setEditingStory(story);
     setEditClientName(story.clientName);
     setEditTitle(story.title);
@@ -121,31 +152,50 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
     setEditPdfName(story.pdfName || '');
   };
 
-  // Save Edits
+  // Save Edits or Add New Story
   const handleSaveModalEdits = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingStory) return;
+    if (!editClientName || !editTitle) return;
 
     const resultsArray = editResults
       ? editResults.split('\n').map((r) => r.trim()).filter(Boolean)
       : ['100% audit pass rate achieved'];
 
-    updateSuccessStory(editingStory.id, {
-      clientName: editClientName,
-      title: editTitle,
-      industry: editIndustry || 'Enterprise',
-      standard: editStandard || 'ISO 9001:2015',
-      challenge: editChallenge,
-      solution: editSolution,
-      results: resultsArray,
-      imageUrl: editImageUrl,
-      pdfUrl: editPdfUrl || undefined,
-      pdfName: editPdfName || undefined,
-    });
+    if (isAddingNewStory) {
+      const createdStory = addSuccessStory({
+        clientName: editClientName,
+        title: editTitle,
+        industry: editIndustry || 'Enterprise',
+        standard: editStandard || 'ISO 9001:2015',
+        challenge: editChallenge || 'Enterprise quality and compliance audit implementation.',
+        solution: editSolution || 'Deployed ISO Quality Centre automated control frameworks.',
+        results: resultsArray,
+        imageUrl: editImageUrl || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+        pdfUrl: editPdfUrl || undefined,
+        pdfName: editPdfName || undefined,
+      });
 
-    setUploadStatus(`Saved changes for "${editClientName}" to database!`);
+      setSelectedStoryId(createdStory.id);
+      setUploadStatus(`New case study for "${editClientName}" published to database!`);
+    } else if (editingStory) {
+      updateSuccessStory(editingStory.id, {
+        clientName: editClientName,
+        title: editTitle,
+        industry: editIndustry || 'Enterprise',
+        standard: editStandard || 'ISO 9001:2015',
+        challenge: editChallenge,
+        solution: editSolution,
+        results: resultsArray,
+        imageUrl: editImageUrl,
+        pdfUrl: editPdfUrl || undefined,
+        pdfName: editPdfName || undefined,
+      });
+      setUploadStatus(`Saved changes for "${editClientName}" to database!`);
+    }
+
     setTimeout(() => setUploadStatus(null), 5000);
     setEditingStory(null);
+    setIsAddingNewStory(false);
   };
 
   // Modal Image Upload
@@ -209,8 +259,8 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
             Explore how East Africa’s premier banks, telecommunications giants, and manufacturers achieved 100% compliance and audit excellence.
           </p>
 
-          {/* View Mode Toggle Pill Bar */}
-          <div className="pt-4 flex items-center justify-center gap-2">
+          {/* View Mode Toggle & Add Story Pill Bar */}
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
             <div className={`p-1.5 rounded-2xl border flex items-center gap-1 ${
               isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
             }`}>
@@ -237,6 +287,14 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                 <span>Show All {successStories.length} Case Studies</span>
               </button>
             </div>
+
+            <button
+              onClick={openAddNewModal}
+              className="px-5 py-3 rounded-2xl text-xs font-bold bg-[#00A9CF] hover:bg-[#0096C7] text-slate-950 transition-all shadow-md flex items-center gap-2 active:scale-95"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>Add New Case Study</span>
+            </button>
           </div>
 
           {/* Upload Status Banner */}
@@ -606,22 +664,57 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                 </div>
               </div>
             ))}
+
+            {/* Add New Case Study Card Tile */}
+            <div
+              onClick={openAddNewModal}
+              className={`rounded-3xl border-2 border-dashed border-slate-700 hover:border-[#00A9CF] cursor-pointer p-8 flex flex-col items-center justify-center text-center space-y-4 transition-all hover:bg-slate-900/60 min-h-[420px] group ${
+                isDark ? 'bg-slate-900/40' : 'bg-white/80'
+              }`}
+            >
+              <div className="w-16 h-16 rounded-2xl bg-[#00A9CF]/15 text-[#00A9CF] flex items-center justify-center border border-[#00A9CF]/30 shadow-inner group-hover:scale-110 transition-transform">
+                <Plus className="w-8 h-8 stroke-[2.5]" />
+              </div>
+              <div className="space-y-1">
+                <h4 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Publish New Case Study
+                </h4>
+                <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                  Add client accreditation details, ISO standard, verified results, banner image & attach PDF report.
+                </p>
+              </div>
+              <span className="px-4 py-2 rounded-xl text-xs font-bold bg-[#00A9CF] text-slate-950 shadow-md group-hover:bg-[#0096C7]">
+                + Add Case Study
+              </span>
+            </div>
           </div>
         )}
 
         {/* =========================================================================
-            EDIT STORY MODAL DIALOG (FRONT END EDITING)
+            EDIT / ADD STORY MODAL DIALOG
             ========================================================================= */}
         {editingStory && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
             <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-                <div className="flex items-center gap-2 text-amber-400 font-bold text-lg">
-                  <Pencil className="w-5 h-5" />
-                  <span>Edit Success Story: {editingStory.clientName}</span>
+                <div className="flex items-center gap-2 font-bold text-lg">
+                  {isAddingNewStory ? (
+                    <>
+                      <Plus className="w-5 h-5 text-[#00A9CF]" />
+                      <span className="text-[#00A9CF]">Publish New Client Case Study</span>
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="w-5 h-5 text-amber-400" />
+                      <span className="text-amber-400">Edit Success Story: {editingStory.clientName}</span>
+                    </>
+                  )}
                 </div>
                 <button
-                  onClick={() => setEditingStory(null)}
+                  onClick={() => {
+                    setEditingStory(null);
+                    setIsAddingNewStory(false);
+                  }}
                   className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -784,17 +877,24 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                   <button
                     type="button"
-                    onClick={() => setEditingStory(null)}
+                    onClick={() => {
+                      setEditingStory(null);
+                      setIsAddingNewStory(false);
+                    }}
                     className="px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 transition-all flex items-center gap-2 shadow-md"
+                    className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-md ${
+                      isAddingNewStory
+                        ? 'bg-[#00A9CF] hover:bg-[#0096C7] text-slate-950'
+                        : 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                    }`}
                   >
-                    <Save className="w-4 h-4" />
-                    <span>Save Changes</span>
+                    {isAddingNewStory ? <Plus className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                    <span>{isAddingNewStory ? 'Publish Case Study to Database' : 'Save Changes'}</span>
                   </button>
                 </div>
               </form>
