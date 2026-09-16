@@ -13,7 +13,7 @@ export const SUPABASE_ANON_KEY =
 export const LIVE_SUPABASE_LOGO_URL = `${SUPABASE_URL}/storage/v1/object/public/client-logos/quality-centre-logo.jpg`;
 
 // Live public URL for full CMS configuration database in Supabase Storage
-export const LIVE_SUPABASE_DB_URL = `${SUPABASE_URL}/storage/v1/object/public/site-data/cms-database.json`;
+export const LIVE_SUPABASE_DB_URL = `${SUPABASE_URL}/storage/v1/object/public/client-logos/cms-database.json`;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -50,20 +50,21 @@ export async function saveLiveDatabaseToSupabase(dbData: any) {
     const blob = new Blob([jsonString], { type: 'application/json' });
 
     const { error } = await supabase.storage
-      .from('site-data')
+      .from('client-logos')
       .upload('cms-database.json', blob, {
         contentType: 'application/json',
         upsert: true,
       });
 
     if (error) {
-      // Fallback to proxy endpoint if RLS restricts browser anon key
-      await fetch('/api/cms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: jsonString,
-      }).catch(() => {});
+      console.warn('Supabase storage upload notice:', error);
     }
+    // Always call server proxy endpoint to ensure local container disk stays updated
+    await fetch('/api/cms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: jsonString,
+    }).catch(() => {});
   } catch (err) {
     console.warn('Live Supabase database save notice:', err);
   }

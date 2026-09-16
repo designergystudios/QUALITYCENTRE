@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { COMPANY_DETAILS, ISO_STANDARDS, FOUNDER_BOOK } from '../data/content';
 import { FounderBook } from '../types';
 import heroInfographicAsset from '../assets/images/hero_infographic_1789451412328.jpg';
@@ -449,6 +449,37 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDatabaseConnected, setIsDatabaseConnected] = useState<boolean>(false);
   const [lastDatabaseSync, setLastDatabaseSync] = useState<Date | null>(null);
 
+  const lastLocalUpdateRef = useRef<number>(0);
+
+  const getFullDatabaseSnapshot = (overrides?: Partial<{
+    heroConfig: HeroConfig;
+    companyConfig: CompanyConfig;
+    clientLogos: ClientLogoItem[];
+    successStories: SuccessStoryItem[];
+    galleryItems: GalleryItem[];
+    bookConfig: FounderBook;
+  }>) => {
+    return {
+      heroConfig: overrides?.heroConfig || heroConfig,
+      companyConfig: overrides?.companyConfig || companyConfig,
+      clientLogos: overrides?.clientLogos || clientLogos,
+      successStories: overrides?.successStories || successStories,
+      galleryItems: overrides?.galleryItems || galleryItems,
+      bookConfig: overrides?.bookConfig || bookConfig,
+      lastUpdated: Date.now(),
+    };
+  };
+
+  const syncDatabaseToCloud = (snapshot: any) => {
+    lastLocalUpdateRef.current = snapshot.lastUpdated || Date.now();
+    saveLiveDatabaseToSupabase(snapshot).catch(() => {});
+    fetch('/api/cms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(snapshot),
+    }).catch(() => {});
+  };
+
   // Fetch full state from backend persistent server database and live Supabase cloud database
   const fetchFromServer = async () => {
     let latestData: any = null;
@@ -487,6 +518,14 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (latestData) {
       setIsDatabaseConnected(true);
       setLastDatabaseSync(new Date());
+
+      const remoteTime = Number(latestData.lastUpdated || 0);
+      const localEditTime = lastLocalUpdateRef.current;
+
+      // If a local edit was made recently (within last 8 seconds) and the remote database returns an older timestamp, ignore the stale response to prevent reverting admin changes
+      if (localEditTime > 0 && Date.now() - localEditTime < 8000 && remoteTime < localEditTime) {
+        return;
+      }
 
       if (latestData.companyConfig) {
         const cfg: CompanyConfig = { ...latestData.companyConfig };
@@ -840,63 +879,41 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: new Date().toISOString().split('T')[0],
     };
 
-    let nextStories: SuccessStoryItem[] = [];
+    let updatedList: SuccessStoryItem[] = [];
 
     setSuccessStories((prev) => {
-      nextStories = [newStory, ...prev];
+      updatedList = [newStory, ...prev];
       try {
-        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(nextStories));
+        localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(updatedList));
       } catch (e) {}
-      return nextStories;
+      return updatedList;
     });
+
+    syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: updatedList }));
 
     (async () => {
       let finalUrl = story.imageUrl;
       if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
         try {
           finalUrl = await uploadStoryImageToLiveStorage(finalUrl, story.clientName);
+          let listWithImage: SuccessStoryItem[] = [];
           setSuccessStories((prev) => {
-            const next = prev.map((item) => (item.id === tempId ? { ...item, imageUrl: finalUrl } : item));
+            listWithImage = prev.map((item) => (item.id === tempId ? { ...item, imageUrl: finalUrl } : item));
             try {
-              localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(next));
+              localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(listWithImage));
             } catch (e) {}
-            return next;
+            return listWithImage;
           });
+          syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: listWithImage }));
         } catch (err) {
           console.warn('Direct Supabase story image upload notice:', err);
         }
       }
 
-      const updatedStoryItem = { ...newStory, imageUrl: finalUrl };
-
-      try {
-        const res = await fetch('/api/success-stories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedStoryItem),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.successStories) && data.successStories.length > 0) {
-            setSuccessStories(data.successStories);
-            try {
-              localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(data.successStories));
-            } catch (e) {}
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to publish success story to database API:', e);
-      }
-
-      // Persist full database snapshot directly to live Supabase Cloud database
-      saveLiveDatabaseToSupabase({
-        heroConfig,
-        companyConfig,
-        galleryItems,
-        clientLogos,
-        successStories: [updatedStoryItem, ...successStories.filter((s) => s.id !== tempId)],
-        bookConfig,
-        lastUpdated: Date.now(),
+      fetch('/api/success-stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newStory, imageUrl: finalUrl }),
       }).catch(() => {});
     })();
 
@@ -922,31 +939,12 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     if (updatedStory) {
+      syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: nextStories }));
+
       fetch('/api/success-stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedStory),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data.successStories) && data.successStories.length > 0) {
-            setSuccessStories(data.successStories);
-            try {
-              localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(data.successStories));
-            } catch (e) {}
-          }
-        })
-        .catch((e) => console.warn('Failed to sync updated story to backend API:', e));
-
-      // Persist full database snapshot directly to live Supabase Cloud database
-      saveLiveDatabaseToSupabase({
-        heroConfig,
-        companyConfig,
-        galleryItems,
-        clientLogos,
-        successStories: nextStories,
-        bookConfig,
-        lastUpdated: Date.now(),
       }).catch(() => {});
     }
   };
@@ -961,18 +959,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return nextStories;
     });
 
-    fetch(`/api/success-stories/${id}`, { method: 'DELETE' }).catch(() => {});
+    syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: nextStories }));
 
-    // Persist full database snapshot directly to live Supabase Cloud database
-    saveLiveDatabaseToSupabase({
-      heroConfig,
-      companyConfig,
-      galleryItems,
-      clientLogos,
-      successStories: nextStories,
-      bookConfig,
-      lastUpdated: Date.now(),
-    }).catch(() => {});
+    fetch(`/api/success-stories/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const setMediaAsHero = (type: 'video' | 'infographic', url: string) => {

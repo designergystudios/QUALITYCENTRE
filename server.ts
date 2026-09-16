@@ -22,7 +22,7 @@ fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 async function syncDatabaseToSupabase(data: any) {
   if (!SUPABASE_KEY) return;
   try {
-    await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/client-logos/cms-database.json`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_KEY,
