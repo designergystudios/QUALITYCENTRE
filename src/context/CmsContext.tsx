@@ -70,6 +70,8 @@ export interface SuccessStoryItem {
   imageUrl: string;
   standard: string;
   date: string;
+  pdfUrl?: string;
+  pdfName?: string;
 }
 
 export interface CmsContextType {

@@ -359,6 +359,52 @@ app.post('/api/upload-client-logo', async (req: Request, res: Response) => {
   });
 });
 
+// POST upload PDF document to live Supabase Storage bucket
+app.post('/api/upload-pdf', async (req: Request, res: Response) => {
+  const { file, fileName, bucket = 'client-logos' } = req.body;
+  if (!file) {
+    return res.status(400).json({ error: 'No file provided' });
+  }
+
+  let finalUrl = file;
+
+  if (typeof file === 'string' && file.startsWith('data:')) {
+    try {
+      const matches = file.match(/^data:(.+?);base64,(.+)$/);
+      if (matches) {
+        const mimeType = matches[1];
+        let ext = 'pdf';
+        if (mimeType.includes('png')) ext = 'png';
+        else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = 'jpg';
+        else if (mimeType.includes('svg')) ext = 'svg';
+
+        const buffer = Buffer.from(matches[2], 'base64');
+        const uniqueFileName = fileName || `case-study-${Date.now()}.${ext}`;
+
+        try {
+          const targetPath = path.join(UPLOADS_DIR, uniqueFileName);
+          fs.writeFileSync(targetPath, buffer);
+          finalUrl = `/uploads/${uniqueFileName}`;
+        } catch {}
+
+        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType, bucket);
+        if (supabaseUrl) {
+          finalUrl = supabaseUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to upload PDF to Supabase storage:', e);
+    }
+  }
+
+  res.json({
+    success: true,
+    pdfUrl: finalUrl,
+    logoUrl: finalUrl,
+    isCloudHosted: finalUrl.includes('supabase.co'),
+  });
+});
+
 // Client logos CRUD
 app.post('/api/client-logos', async (req: Request, res: Response) => {
   const db = readDatabase();

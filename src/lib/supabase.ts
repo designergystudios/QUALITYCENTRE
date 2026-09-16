@@ -64,14 +64,15 @@ export async function uploadFileToSupabaseStorage({
     let fileExt = 'jpg';
 
     if (typeof fileOrDataUrl === 'string') {
-      if (fileOrDataUrl.startsWith('data:image/')) {
-        const matches = fileOrDataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (fileOrDataUrl.startsWith('data:')) {
+        const matches = fileOrDataUrl.match(/^data:(.+?);base64,(.+)$/);
         if (matches) {
-          mimeType = `image/${matches[1]}`;
-          if (matches[1] === 'svg+xml') fileExt = 'svg';
-          else if (matches[1] === 'png') fileExt = 'png';
-          else if (matches[1] === 'webp') fileExt = 'webp';
-          else if (matches[1] === 'jpeg' || matches[1] === 'jpg') fileExt = 'jpg';
+          mimeType = matches[1];
+          if (mimeType.includes('pdf')) fileExt = 'pdf';
+          else if (mimeType.includes('svg')) fileExt = 'svg';
+          else if (mimeType.includes('png')) fileExt = 'png';
+          else if (mimeType.includes('webp')) fileExt = 'webp';
+          else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) fileExt = 'jpg';
 
           const byteCharacters = atob(matches[2]);
           const byteNumbers = new Array(byteCharacters.length);
@@ -88,9 +89,10 @@ export async function uploadFileToSupabaseStorage({
       }
     } else {
       buffer = fileOrDataUrl;
-      mimeType = fileOrDataUrl.type || 'image/jpeg';
+      mimeType = fileOrDataUrl.type || 'application/pdf';
       const name = fileOrDataUrl.name.toLowerCase();
-      if (name.endsWith('.png')) fileExt = 'png';
+      if (name.endsWith('.pdf')) fileExt = 'pdf';
+      else if (name.endsWith('.png')) fileExt = 'png';
       else if (name.endsWith('.svg')) fileExt = 'svg';
       else if (name.endsWith('.webp')) fileExt = 'webp';
       else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) fileExt = 'jpg';
@@ -242,5 +244,28 @@ export async function uploadBookCoverToLiveStorage(
     bucket: 'client-logos',
     filename,
     prefix: 'book',
+  });
+}
+
+/**
+ * Upload a Case Study PDF document directly to live Supabase Storage bucket ('client-logos' or 'site-data')
+ */
+export async function uploadPdfToLiveStorage(
+  fileOrDataUrl: string | File,
+  storyTitle?: string
+): Promise<string> {
+  const cleanTitle = (storyTitle || 'case-study')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 24);
+
+  const filename = `case-study-${cleanTitle}-${Date.now()}.pdf`;
+
+  return uploadFileToSupabaseStorage({
+    fileOrDataUrl,
+    bucket: 'client-logos',
+    filename,
+    prefix: 'case-study-pdf',
   });
 }
