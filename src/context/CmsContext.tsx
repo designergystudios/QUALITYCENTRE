@@ -669,14 +669,24 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const remoteTime = Number(latestData.lastUpdated || 0);
       const localEditTime = lastLocalUpdateRef.current;
 
-      // If a local edit was made within the last 1.5 seconds and remote is strictly older, ignore to prevent race-condition rollback
-      if (localEditTime > 0 && Date.now() - localEditTime < 1500 && remoteTime < localEditTime) {
+      // Never overwrite local state if a local save/sync is currently in flight
+      if (isSavingToDatabase) {
+        return;
+      }
+
+      // If a local edit was made and remote data is strictly older than our edit, ignore to prevent state rollback
+      if (localEditTime > 0 && remoteTime < localEditTime) {
         return;
       }
 
       applyDatabaseSnapshot(latestData);
       setIsDatabaseConnected(true);
       setLastDatabaseSync(new Date());
+
+      // Remote has caught up to or exceeded our local edits
+      if (remoteTime >= localEditTime) {
+        lastLocalUpdateRef.current = 0;
+      }
     } else {
       setIsDatabaseConnected(false);
     }
@@ -982,76 +992,82 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addSuccessStory = async (story: Omit<SuccessStoryItem, 'id' | 'date'>): Promise<SuccessStoryItem> => {
+    let finalUrl = story.imageUrl;
+    let finalPdfUrl = story.pdfUrl;
+
+    // Convert any base64 data URLs to permanent Supabase Storage URLs first
+    if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
+      try {
+        finalUrl = await uploadStoryImageToLiveStorage(finalUrl, story.clientName);
+      } catch (err) {
+        console.warn('Direct Supabase story image upload notice:', err);
+      }
+    }
+
+    if (finalPdfUrl && typeof finalPdfUrl === 'string' && finalPdfUrl.startsWith('data:')) {
+      try {
+        finalPdfUrl = await uploadPdfToLiveStorage(finalPdfUrl, story.clientName);
+      } catch (e) {
+        console.warn('Story PDF upload notice:', e);
+      }
+    }
+
     const tempId = `story-${Date.now()}`;
     const newStory: SuccessStoryItem = {
       ...story,
+      imageUrl: finalUrl,
+      pdfUrl: finalPdfUrl,
       id: tempId,
       date: new Date().toISOString().split('T')[0],
     };
 
-    const nextStories = [newStory, ...successStoriesRef.current];
+    const nextStories = [newStory, ...successStoriesRef.current.filter((s) => s.id !== tempId)];
     successStoriesRef.current = nextStories;
     setSuccessStories(nextStories);
 
     const snapshot = getFullDatabaseSnapshot({ successStories: nextStories });
     await syncDatabaseToCloud(snapshot);
 
-    (async () => {
-      let finalUrl = story.imageUrl;
-      let finalPdfUrl = story.pdfUrl;
-      let hasAsyncUpload = false;
-
-      if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
-        try {
-          finalUrl = await uploadStoryImageToLiveStorage(finalUrl, story.clientName);
-          hasAsyncUpload = true;
-        } catch (err) {
-          console.warn('Direct Supabase story image upload notice:', err);
-        }
-      }
-
-      if (finalPdfUrl && typeof finalPdfUrl === 'string' && finalPdfUrl.startsWith('data:')) {
-        try {
-          finalPdfUrl = await uploadPdfToLiveStorage(finalPdfUrl, story.clientName);
-          hasAsyncUpload = true;
-        } catch (e) {
-          console.warn('Story PDF upload notice:', e);
-        }
-      }
-
-      if (hasAsyncUpload) {
-        const currentList = successStoriesRef.current;
-        const listWithImage = currentList.map((item) =>
-          item.id === tempId ? { ...item, imageUrl: finalUrl, pdfUrl: finalPdfUrl } : item
-        );
-        successStoriesRef.current = listWithImage;
-        setSuccessStories(listWithImage);
-        await syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: listWithImage }));
-      }
-
-      fetch('/api/success-stories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newStory, imageUrl: finalUrl, pdfUrl: finalPdfUrl }),
-      }).catch(() => {});
-    })();
-
     return newStory;
   };
 
   const updateSuccessStory = async (id: string, updates: Partial<SuccessStoryItem>): Promise<boolean> => {
-    const currentList = successStoriesRef.current;
-    let targetStory: SuccessStoryItem | undefined;
+    let finalImageUrl = updates.imageUrl;
+    let finalPdfUrl = updates.pdfUrl;
 
+    // Convert any base64 data URLs to permanent Supabase Storage URLs first
+    if (finalImageUrl && typeof finalImageUrl === 'string' && finalImageUrl.startsWith('data:image/')) {
+      try {
+        finalImageUrl = await uploadStoryImageToLiveStorage(finalImageUrl, updates.clientName);
+      } catch (e) {
+        console.warn('Story image upload notice:', e);
+      }
+    }
+
+    if (finalPdfUrl && typeof finalPdfUrl === 'string' && finalPdfUrl.startsWith('data:')) {
+      try {
+        finalPdfUrl = await uploadPdfToLiveStorage(finalPdfUrl, updates.clientName);
+      } catch (e) {
+        console.warn('Story PDF upload notice:', e);
+      }
+    }
+
+    const currentList = successStoriesRef.current;
+    let found = false;
     const nextStories = currentList.map((item) => {
       if (item.id === id) {
-        targetStory = { ...item, ...updates };
-        return targetStory;
+        found = true;
+        return {
+          ...item,
+          ...updates,
+          ...(finalImageUrl ? { imageUrl: finalImageUrl } : {}),
+          ...(finalPdfUrl !== undefined ? { pdfUrl: finalPdfUrl } : {}),
+        };
       }
       return item;
     });
 
-    if (!targetStory) {
+    if (!found) {
       console.warn('Target story not found for update:', id);
       return false;
     }
@@ -1064,47 +1080,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const snapshot = getFullDatabaseSnapshot({ successStories: nextStories });
     const saved = await syncDatabaseToCloud(snapshot);
 
-    // Asynchronously handle any uploaded base64 images or PDFs to convert them to permanent Supabase URLs
-    (async () => {
-      let finalImageUrl = targetStory?.imageUrl;
-      let finalPdfUrl = targetStory?.pdfUrl;
-      let hasAsyncUpload = false;
-
-      if (finalImageUrl && typeof finalImageUrl === 'string' && finalImageUrl.startsWith('data:image/')) {
-        try {
-          finalImageUrl = await uploadStoryImageToLiveStorage(finalImageUrl, targetStory?.clientName);
-          hasAsyncUpload = true;
-        } catch (e) {
-          console.warn('Story image upload notice:', e);
-        }
-      }
-
-      if (finalPdfUrl && typeof finalPdfUrl === 'string' && finalPdfUrl.startsWith('data:')) {
-        try {
-          finalPdfUrl = await uploadPdfToLiveStorage(finalPdfUrl, targetStory?.clientName);
-          hasAsyncUpload = true;
-        } catch (e) {
-          console.warn('Story PDF upload notice:', e);
-        }
-      }
-
-      if (hasAsyncUpload) {
-        const currentNow = successStoriesRef.current;
-        const updatedList = currentNow.map((item) =>
-          item.id === id ? { ...item, imageUrl: finalImageUrl, pdfUrl: finalPdfUrl } : item
-        );
-        successStoriesRef.current = updatedList;
-        setSuccessStories(updatedList);
-        await syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: updatedList }));
-      }
-
-      fetch('/api/success-stories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...targetStory, imageUrl: finalImageUrl, pdfUrl: finalPdfUrl }),
-      }).catch(() => {});
-    })();
-
     return saved;
   };
 
@@ -1115,8 +1090,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const snapshot = getFullDatabaseSnapshot({ successStories: nextStories });
     await syncDatabaseToCloud(snapshot);
-
-    fetch(`/api/success-stories/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const addBlogPost = (post: Omit<BlogPostItem, 'id' | 'publishedDate'>): BlogPostItem => {

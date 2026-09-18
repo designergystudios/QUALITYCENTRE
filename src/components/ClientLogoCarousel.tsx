@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Sparkles,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
 
 export const ClientLogoCarousel: React.FC = () => {
@@ -93,7 +94,7 @@ export const ClientLogoCarousel: React.FC = () => {
     setUploadStatus(null);
   };
 
-  // Upload image file handler
+  // Upload image file handler with instant visual preview and immediate cloud database persistence
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -103,24 +104,87 @@ export const ClientLogoCarousel: React.FC = () => {
       return;
     }
 
+    // 1. Instant local visual feedback so user sees their image immediately
+    try {
+      const localPreview = URL.createObjectURL(file);
+      setLogoUrl(localPreview);
+    } catch {}
+
+    // 2. Intelligent name inference if title is not yet provided
+    const cleanFileName = file.name
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
+    const targetName = (logoName.trim() || cleanFileName || 'Certified Partner').trim();
+    if (!logoName.trim()) {
+      setLogoName(targetName);
+    }
+
     setIsUploading(true);
-    setUploadProgress(30);
+    setUploadProgress(25);
     setUploadStatus(`Uploading "${file.name}" to cloud storage...`);
 
     try {
-      setUploadProgress(70);
-      const publicUrl = await uploadClientLogoToStorage(file, logoName || file.name);
+      setUploadProgress(60);
+      const publicUrl = await uploadClientLogoToStorage(file, targetName);
       setUploadProgress(100);
       setLogoUrl(publicUrl);
-      setUploadStatus(`Successfully uploaded to cloud storage!`);
-      showNotification(`Image "${file.name}" uploaded successfully!`);
+      setUploadStatus(`Uploaded & saved to cloud database!`);
+
+      // 3. IMMEDIATE DATABASE AUTO-PERSISTENCE: never lose uploaded image across devices
+      if (activeTab === 'edit' && selectedLogoId) {
+        await updateClientLogo(selectedLogoId, {
+          name: targetName,
+          logoUrl: publicUrl,
+          ...(logoIndustry ? { industry: logoIndustry.trim() } : {}),
+          ...(logoCaption ? { caption: logoCaption.trim() } : {}),
+        });
+        showNotification(`"${targetName}" logo image updated & saved to live database!`);
+      } else {
+        // Auto-save new client into carousel so it appears instantly
+        const newLogo = await addClientLogo({
+          name: targetName,
+          industry: logoIndustry.trim() || 'Enterprise Partner',
+          caption: logoCaption.trim(),
+          logoUrl: publicUrl,
+        });
+        if (newLogo) {
+          setSelectedLogoId(newLogo.id);
+          setActiveTab('edit');
+        }
+        showNotification(`"${targetName}" added to carousel & saved to live database!`);
+      }
     } catch (err: any) {
-      console.error('Logo upload error:', err);
-      setUploadStatus('Upload note: using local preview fallback');
-      showNotification('Image processed and ready to save');
+      console.warn('Direct upload notice, using persistent base64 data fallback:', err);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        setLogoUrl(dataUrl);
+        if (activeTab === 'edit' && selectedLogoId) {
+          await updateClientLogo(selectedLogoId, {
+            name: targetName,
+            logoUrl: dataUrl,
+          });
+          showNotification(`"${targetName}" saved to database (offline/fallback mode)!`);
+        } else {
+          const newLogo = await addClientLogo({
+            name: targetName,
+            industry: logoIndustry.trim() || 'Enterprise Partner',
+            caption: logoCaption.trim(),
+            logoUrl: dataUrl,
+          });
+          if (newLogo) {
+            setSelectedLogoId(newLogo.id);
+            setActiveTab('edit');
+          }
+          showNotification(`"${targetName}" saved to database!`);
+        }
+      };
+      reader.readAsDataURL(file);
     } finally {
       setIsUploading(false);
-      setTimeout(() => setUploadProgress(null), 1000);
+      setTimeout(() => setUploadProgress(null), 1200);
       if (e.target) e.target.value = '';
     }
   };
@@ -237,7 +301,8 @@ export const ClientLogoCarousel: React.FC = () => {
           {clientLogos.concat(clientLogos).map((client, idx) => (
             <div
               key={`${client.id}-${idx}`}
-              className={`flex items-center gap-3.5 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl border transition-all duration-300 flex-shrink-0 group hover:-translate-y-1 shadow-md relative ${
+              onClick={() => handleOpenEditModal(client.id)}
+              className={`flex items-center gap-3.5 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl border transition-all duration-300 flex-shrink-0 group hover:-translate-y-1 shadow-md relative cursor-pointer ${
                 isDark
                   ? 'bg-slate-900/90 border-slate-800 hover:border-[#00A9CF]/60 hover:bg-slate-900'
                   : 'bg-white border-slate-200 hover:border-[#00A9CF]/60 hover:shadow-lg'
@@ -401,6 +466,17 @@ export const ClientLogoCarousel: React.FC = () => {
                               alt={client.name}
                               className="w-full h-full object-contain"
                               referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                const initials = (client.name || 'QC')
+                                  .split(' ')
+                                  .map((w: string) => w[0])
+                                  .slice(0, 2)
+                                  .join('')
+                                  .toUpperCase();
+                                target.onerror = null;
+                                target.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="100%" height="100%" fill="%230F172A" rx="12"/><text x="50%" y="55%" font-size="18" font-family="sans-serif" font-weight="bold" fill="%2300A9CF" dominant-baseline="middle" text-anchor="middle">${initials}</text></svg>`;
+                              }}
                             />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -474,13 +550,35 @@ export const ClientLogoCarousel: React.FC = () => {
                         {/* Current/Preview Image */}
                         <div className="sm:col-span-4 flex flex-col items-center justify-center p-3 rounded-2xl border border-slate-700 bg-slate-900/80 min-h-[120px]">
                           {logoUrl ? (
-                            <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-950 p-2 border border-slate-700 flex items-center justify-center shadow-inner">
+                            <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-950 p-2 border border-slate-700 flex items-center justify-center shadow-inner relative">
                               <img
                                 src={logoUrl}
                                 alt="Preview"
                                 className="w-full h-full object-contain"
                                 referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  const initials = (logoName || 'QC')
+                                    .split(' ')
+                                    .map((w: string) => w[0])
+                                    .slice(0, 2)
+                                    .join('')
+                                    .toUpperCase();
+                                  target.onerror = null;
+                                  target.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%230F172A" rx="16"/><text x="50%" y="55%" font-size="28" font-family="sans-serif" font-weight="bold" fill="%2300A9CF" dominant-baseline="middle" text-anchor="middle">${initials}</text></svg>`;
+                                }}
                               />
+                              {isUploading && (
+                                <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1">
+                                  <Loader2 className="w-6 h-6 text-[#00A9CF] animate-spin" />
+                                  <span className="text-[9px] text-[#00A9CF] font-medium">Uploading...</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : isUploading ? (
+                            <div className="flex flex-col items-center justify-center text-slate-400 text-xs py-4 gap-1">
+                              <Loader2 className="w-8 h-8 text-[#00A9CF] animate-spin mb-1" />
+                              <span>Loading image...</span>
                             </div>
                           ) : (
                             <div className="flex flex-col items-center justify-center text-slate-500 text-xs py-4">

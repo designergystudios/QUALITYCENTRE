@@ -26,8 +26,23 @@ export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
  * Fetch latest CMS configuration directly from live Supabase database
  */
 export async function fetchLiveDatabase() {
+  // 1. Direct authenticated download from Supabase Storage origin (bypasses Cloudflare public CDN cache completely)
   try {
-    const res = await fetch(`${LIVE_SUPABASE_DB_URL}?t=${Date.now()}`, {
+    const { data, error } = await supabaseAdmin.storage.from('site-data').download('cms-database.json');
+    if (!error && data) {
+      const text = await data.text();
+      const parsed = JSON.parse(text);
+      if (parsed && (parsed.clientLogos || parsed.companyConfig || parsed.heroConfig || parsed.successStories)) {
+        return parsed;
+      }
+    }
+  } catch (adminErr) {
+    // Fallback to direct HTTP fetch
+  }
+
+  // 2. Secondary direct HTTP fetch with aggressive cache-busting
+  try {
+    const res = await fetch(`${LIVE_SUPABASE_DB_URL}?t=${Date.now()}&_bust=${Math.random().toString(36).slice(2)}`, {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -55,6 +70,19 @@ export async function saveLiveDatabaseToSupabase(dbData: any): Promise<boolean> 
     };
     const jsonString = JSON.stringify(payload, null, 2);
 
+    // 1. Try supabaseAdmin SDK upload with upsert (atomic and authenticated)
+    try {
+      const { error } = await supabaseAdmin.storage.from('site-data').upload('cms-database.json', jsonString, {
+        upsert: true,
+        contentType: 'application/json',
+      });
+      if (!error) {
+        return true;
+      }
+    } catch (adminErr) {
+      console.warn('supabaseAdmin direct storage upload notice:', adminErr);
+    }
+
     const headers = {
       apikey: SUPABASE_SERVICE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
@@ -63,7 +91,7 @@ export async function saveLiveDatabaseToSupabase(dbData: any): Promise<boolean> 
       'cache-control': 'no-cache, no-store, must-revalidate',
     };
 
-    // Direct PUT/POST to Supabase Storage site-data/cms-database.json (Accessible globally to all devices)
+    // 2. Direct PUT/POST fallback to Supabase Storage site-data/cms-database.json
     let res = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
       method: 'PUT',
       headers,
@@ -184,7 +212,7 @@ export async function uploadFileToSupabaseStorage({
         });
 
       if (!error && data) {
-        return `${SUPABASE_URL}/storage/v1/object/public/${targetBucket}/${finalFilename}`;
+        return `${SUPABASE_URL}/storage/v1/object/public/${targetBucket}/${finalFilename}?t=${Date.now()}`;
       }
 
       // If client-logos bucket rejected mime type or size, immediately upload to 'site-data' which allows all files
@@ -197,7 +225,7 @@ export async function uploadFileToSupabaseStorage({
           });
 
         if (!fallback.error && fallback.data) {
-          return `${SUPABASE_URL}/storage/v1/object/public/site-data/${finalFilename}`;
+          return `${SUPABASE_URL}/storage/v1/object/public/site-data/${finalFilename}?t=${Date.now()}`;
         }
       }
     } catch (directErr) {
@@ -231,7 +259,7 @@ export async function uploadFileToSupabaseStorage({
     }
 
     // Ultimate fallback: direct public storage URL in site-data
-    return `${SUPABASE_URL}/storage/v1/object/public/site-data/${finalFilename}`;
+    return `${SUPABASE_URL}/storage/v1/object/public/site-data/${finalFilename}?t=${Date.now()}`;
   } catch (err) {
     console.error('Failed to upload file to Supabase storage:', err);
     throw err;

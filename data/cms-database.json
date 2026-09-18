@@ -48,39 +48,44 @@
     {
       "id": "logo-1",
       "name": "Kenya flower council",
-      "logoUrl": "https://zzgwjegqiefanzhshxyn.supabase.co/storage/v1/object/public/client-logos/client-kenya-commercial-bank-1789725371999.jpg",
+      "logoUrl": "https://zzgwjegqiefanzhshxyn.supabase.co/storage/v1/object/public/client-logos/client-kenyaflower-jpg-1789727802858.jpg",
       "industry": "Banking & Finance",
       "caption": ""
     },
     {
       "id": "logo-2",
-      "name": "East African Breweries",
-      "logoUrl": "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=300&q=80",
-      "industry": "Manufacturing"
+      "name": "Kenya National  Library Services",
+      "logoUrl": "https://zzgwjegqiefanzhshxyn.supabase.co/storage/v1/object/public/client-logos/client-kenya-national-library-s-1789729268158.jpg?t=1789729269600",
+      "industry": "Education",
+      "caption": ""
     },
     {
       "id": "logo-3",
-      "name": "Safaricom Telemetry",
-      "logoUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=300&q=80",
-      "industry": "Telecommunications"
+      "name": "Kofinaf",
+      "logoUrl": "https://zzgwjegqiefanzhshxyn.supabase.co/storage/v1/object/public/client-logos/client-safaricom-telemetry-1789729406312.jpg?t=1789729407447",
+      "industry": "Ariculture",
+      "caption": ""
     },
     {
       "id": "logo-4",
-      "name": "Bamburi Cement",
-      "logoUrl": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=300&q=80",
-      "industry": "Construction"
+      "name": "Kenya Wildlife Services",
+      "logoUrl": "https://zzgwjegqiefanzhshxyn.supabase.co/storage/v1/object/public/client-logos/client-bamburi-cement-1789729586390.jpg?t=1789729587343",
+      "industry": "Government",
+      "caption": ""
     },
     {
       "id": "logo-5",
-      "name": "Equity Group Holdings",
-      "logoUrl": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=300&q=80",
-      "industry": "Financial Services"
+      "name": "UNES",
+      "logoUrl": "https://zzgwjegqiefanzhshxyn.supabase.co/storage/v1/object/public/client-logos/client-equity-group-holdings-1789729667133.jpg?t=1789729667855",
+      "industry": "Educattion",
+      "caption": ""
     },
     {
       "id": "logo-6",
-      "name": "Nairobi Bottlers",
-      "logoUrl": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=300&q=80",
-      "industry": "FMCG"
+      "name": "Nema- National Environmental Management Agency",
+      "logoUrl": "https://zzgwjegqiefanzhshxyn.supabase.co/storage/v1/object/public/client-logos/client-nairobi-bottlers-1789729491570.jpg?t=1789729493966",
+      "industry": "Governmentt",
+      "caption": ""
     }
   ],
   "successStories": [
@@ -401,5 +406,5 @@
       "founderTwitter": "https://x.com/juliusnmm"
     }
   },
-  "lastUpdated": 1789727966047
+  "lastUpdated": 1789730576112
 }

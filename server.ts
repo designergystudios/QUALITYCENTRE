@@ -175,7 +175,7 @@ function readDatabase() {
 // Helper to write database
 async function writeDatabase(data: any) {
   try {
-    data.lastUpdated = Date.now();
+    data.lastUpdated = data.lastUpdated || Date.now();
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
     // Synchronously push update to live Supabase cloud storage (site-data bucket)
     await syncDatabaseToSupabase(data);
@@ -460,15 +460,21 @@ app.post('/api/upload-client-logo', async (req: Request, res: Response) => {
 
   let finalLogoUrl = image;
 
-  if (typeof image === 'string' && image.startsWith('data:image/')) {
+  if (typeof image === 'string' && image.startsWith('data:')) {
     try {
-      const matches = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
-      if (matches) {
-        let ext = matches[1].toLowerCase();
-        let mimeType = `image/${ext}`;
-        if (ext === 'svg+xml') { ext = 'svg'; mimeType = 'image/svg+xml'; }
-        if (ext === 'jpeg') { ext = 'jpg'; mimeType = 'image/jpeg'; }
-        const buffer = Buffer.from(matches[2], 'base64');
+      const commaIdx = image.indexOf(',');
+      if (commaIdx !== -1) {
+        const meta = image.slice(0, commaIdx);
+        const base64Data = image.slice(commaIdx + 1);
+        const mimeMatch = meta.match(/^data:([^;]+)/);
+        let mimeType = (mimeMatch ? mimeMatch[1] : 'image/png').toLowerCase().trim();
+        let ext = 'png';
+        if (mimeType.includes('svg')) { ext = 'svg'; mimeType = 'image/svg+xml'; }
+        else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) { ext = 'jpg'; mimeType = 'image/jpeg'; }
+        else if (mimeType.includes('webp')) { ext = 'webp'; mimeType = 'image/webp'; }
+        else if (mimeType.includes('gif')) { ext = 'gif'; mimeType = 'image/gif'; }
+
+        const buffer = Buffer.from(base64Data, 'base64');
         const cleanName = (clientName || 'client')
           .toLowerCase()
           .replace(/[^a-z0-9]/g, '-')
@@ -484,7 +490,8 @@ app.post('/api/upload-client-logo', async (req: Request, res: Response) => {
         } catch {}
 
         // Upload to live Supabase Storage bucket for cross-device global availability
-        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType, bucket);
+        const targetBucket = mimeType.includes('gif') ? 'site-data' : bucket;
+        const supabaseUrl = await uploadImageToSupabase(buffer, uniqueFileName, mimeType, targetBucket);
         if (supabaseUrl) {
           finalLogoUrl = supabaseUrl;
         }
