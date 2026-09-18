@@ -21,18 +21,27 @@ fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 let lastCloudPullTime = 0;
 async function syncDatabaseFromSupabase(force = false) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/public/site-data/cms-database.json?t=${Date.now()}`, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-      },
+    const headers: Record<string, string> = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    };
+    if (SUPABASE_KEY) {
+      headers['Authorization'] = `Bearer ${SUPABASE_KEY}`;
+      headers['apikey'] = SUPABASE_KEY;
+    }
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
+      headers,
     });
     if (res.ok) {
       const cloudDb = await res.json();
       const localDb = readDatabase();
-      if (force || !localDb || !localDb.lastUpdated || (cloudDb.lastUpdated && cloudDb.lastUpdated >= (localDb.lastUpdated || 0))) {
+      const cloudTime = Number(cloudDb.lastUpdated || 0);
+      const localTime = Number(localDb?.lastUpdated || 0);
+      if (force || !localDb || localTime === 0 || cloudTime >= localTime) {
         fs.writeFileSync(DB_FILE, JSON.stringify(cloudDb, null, 2), 'utf-8');
         console.log('Synchronized local database from Supabase cloud snapshot');
+      } else if (localTime > cloudTime) {
+        await syncDatabaseToSupabase(localDb);
       }
     }
     lastCloudPullTime = Date.now();
@@ -212,21 +221,34 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 // GET full CMS state directly from the live database
 app.get('/api/cms', async (req: Request, res: Response) => {
+  const localDb = readDatabase();
   try {
-    const cloudRes = await fetch(`${SUPABASE_URL}/storage/v1/object/public/site-data/cms-database.json?t=${Date.now()}`, {
+    const headers: Record<string, string> = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    };
+    if (SUPABASE_KEY) {
+      headers['Authorization'] = `Bearer ${SUPABASE_KEY}`;
+      headers['apikey'] = SUPABASE_KEY;
+    }
+    const cloudRes = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
       cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-      },
+      headers,
     });
     if (cloudRes.ok) {
       const cloudData = await cloudRes.json();
-      if (cloudData && (cloudData.clientLogos || cloudData.companyConfig || cloudData.heroConfig)) {
-        try {
-          fs.writeFileSync(DB_FILE, JSON.stringify(cloudData, null, 2), 'utf-8');
-        } catch {}
-        return res.json(cloudData);
+      if (cloudData && (cloudData.clientLogos || cloudData.companyConfig || cloudData.heroConfig || cloudData.successStories)) {
+        const cloudTime = Number(cloudData.lastUpdated || 0);
+        const localTime = Number(localDb?.lastUpdated || 0);
+
+        if (!localDb || localTime === 0 || cloudTime >= localTime) {
+          try {
+            fs.writeFileSync(DB_FILE, JSON.stringify(cloudData, null, 2), 'utf-8');
+          } catch {}
+          return res.json(cloudData);
+        } else {
+          return res.json(localDb);
+        }
       }
     }
   } catch (err) {
@@ -234,11 +256,10 @@ app.get('/api/cms', async (req: Request, res: Response) => {
   }
 
   // Backup fallback
-  const db = readDatabase();
-  if (!db) {
-    return res.status(500).json({ error: 'Database could not be read' });
+  if (localDb) {
+    return res.json(localDb);
   }
-  res.json(db);
+  res.status(500).json({ error: 'Database could not be read' });
 });
 
 // POST save / update full CMS state into persistent database

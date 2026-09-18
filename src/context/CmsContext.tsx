@@ -549,6 +549,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsDatabaseConnected(true);
     setLastDatabaseSync(new Date());
 
+    if (latestData.lastUpdated) {
+      lastLocalUpdateRef.current = Math.max(lastLocalUpdateRef.current, Number(latestData.lastUpdated));
+    }
+
     if (latestData.companyConfig) {
       companyConfigRef.current = latestData.companyConfig;
       setCompanyConfig(latestData.companyConfig);
@@ -667,15 +671,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (latestData) {
       const remoteTime = Number(latestData.lastUpdated || 0);
-      const localEditTime = lastLocalUpdateRef.current;
+      const currentTimestamp = lastLocalUpdateRef.current;
 
       // Never overwrite local state if a local save/sync is currently in flight
       if (isSavingToDatabase) {
         return;
       }
 
-      // If a local edit was made and remote data is strictly older than our edit, ignore to prevent state rollback
-      if (localEditTime > 0 && remoteTime < localEditTime) {
+      // If remote data is strictly older than our current local state timestamp, ignore to prevent state rollback
+      if (currentTimestamp > 0 && remoteTime > 0 && remoteTime < currentTimestamp) {
         return;
       }
 
@@ -683,10 +687,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsDatabaseConnected(true);
       setLastDatabaseSync(new Date());
 
-      // Remote has caught up to or exceeded our local edits
-      if (remoteTime >= localEditTime) {
-        lastLocalUpdateRef.current = 0;
-      }
+      // Monotonically track the latest applied database timestamp
+      lastLocalUpdateRef.current = Math.max(currentTimestamp, remoteTime);
     } else {
       setIsDatabaseConnected(false);
     }
