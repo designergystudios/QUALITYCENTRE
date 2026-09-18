@@ -140,15 +140,14 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                     isDark ? 'text-white' : 'text-slate-900'
                   }`}
                 >
-                  Schedule an ISO Audit & Advisory Consultation
+                  Provide us with this information
                 </h3>
                 <p
                   className={`text-xs sm:text-sm leading-relaxed ${
                     isDark ? 'text-slate-300' : 'text-slate-600'
                   }`}
                 >
-                  Connect with our senior management systems auditors in Nairobi. We evaluate your current
-                  processes and provide a clear, rapid compliance blueprint.
+                  Our expert will revert back to you on the way forward.
                 </p>
               </div>
 
@@ -419,7 +418,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                       isDark ? 'text-slate-400' : 'text-slate-500'
                     }`}
                   >
-                    🔒 Strict NDA Protection & Kenya DPA Compliant Confidentiality
+                    🔒 Strict NDA Protection
                   </div>
 
                   <button

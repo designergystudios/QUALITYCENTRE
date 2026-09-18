@@ -198,7 +198,7 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
   };
 
   // Save Edits or Add New Story
-  const handleSaveModalEdits = (e: React.FormEvent) => {
+  const handleSaveModalEdits = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editClientName || !editTitle) return;
 
@@ -207,7 +207,7 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
       : ['100% audit pass rate achieved'];
 
     if (isAddingNewStory) {
-      const createdStory = addSuccessStory({
+      const createdStory = await addSuccessStory({
         clientName: editClientName,
         title: editTitle,
         industry: editIndustry || 'Enterprise',
@@ -223,7 +223,7 @@ export const SuccessStories: React.FC<{ onOpenConsultation: (topic: string) => v
       setSelectedStoryId(createdStory.id);
       setUploadStatus(`New case study for "${editClientName}" published to database!`);
     } else if (editingStory) {
-      updateSuccessStory(editingStory.id, {
+      await updateSuccessStory(editingStory.id, {
         clientName: editClientName,
         title: editTitle,
         industry: editIndustry || 'Enterprise',

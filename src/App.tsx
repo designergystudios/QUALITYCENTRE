@@ -150,7 +150,7 @@ export default function App() {
           className="flex items-center gap-2 px-4 py-3 rounded-full text-xs font-extrabold text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] shadow-xl shadow-[#00A9CF]/30 active:scale-95 transition-all"
         >
           <PhoneCall className="w-4 h-4 text-slate-950" />
-          <span>Book Audit</span>
+          <span>Talk to our expert</span>
         </button>
       </div>
     </div>

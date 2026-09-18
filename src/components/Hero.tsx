@@ -55,31 +55,6 @@ export const Hero: React.FC<HeroProps> = ({
           HERO CONTENT CONTAINER (EXPANSIVE, HIGH-CONTRAST LAYOUT)
           ========================================================= */}
       <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 z-10 text-center">
-        
-        {/* Top Floating Badge */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: -15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className={`inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-colors ${
-              isDark
-                ? 'bg-slate-900/85 border-[#00A9CF]/30 text-[#00A9CF]'
-                : 'bg-white/95 border-cyan-300 text-[#0077B6] shadow-sm'
-            }`}
-          >
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00A9CF] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00A9CF]" />
-            </span>
-            <span className="tracking-wider uppercase font-mono font-bold">
-              {heroConfig.badgeText}
-            </span>
-            <span className="w-1 h-1 rounded-full bg-slate-400" />
-            <span className="text-[#00A9CF] font-mono font-bold">EST. 1998</span>
-          </motion.div>
-        </div>
-
         {/* Hero Headline & Value Proposition */}
         <motion.div
           initial={{ opacity: 0, y: 25 }}
@@ -109,7 +84,7 @@ export const Hero: React.FC<HeroProps> = ({
               isDark ? 'text-slate-300' : 'text-slate-600'
             }`}
           >
-            {heroConfig.subheadline}
+            Quality Centre transforms ISO, risk, GRC, and ESG/sustainability requirements into high-performing, digitally-enabled operating systems across Africa & beyond.
           </p>
         </motion.div>
 
@@ -139,7 +114,11 @@ export const Hero: React.FC<HeroProps> = ({
             }`}
           >
             <ShieldCheck className="w-5 h-5 text-[#00A9CF]" />
-            <span>{heroConfig.ctaSecondaryText || 'Book ISO Audit'}</span>
+            <span>
+              {heroConfig.ctaSecondaryText && heroConfig.ctaSecondaryText !== 'Book ISO Audit'
+                ? heroConfig.ctaSecondaryText
+                : 'Talk to our expert'}
+            </span>
           </button>
 
           <button

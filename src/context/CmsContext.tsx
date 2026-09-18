@@ -11,6 +11,7 @@ import {
   uploadClientLogoToLiveStorage,
   uploadStoryImageToLiveStorage,
   uploadBookCoverToLiveStorage,
+  uploadPdfToLiveStorage,
 } from '../lib/supabase';
 
 export interface GalleryItem {
@@ -58,6 +59,7 @@ export interface ClientLogoItem {
   name: string;
   logoUrl: string;
   industry?: string;
+  caption?: string;
 }
 
 export interface SuccessStoryItem {
@@ -104,7 +106,9 @@ export interface CmsContextType {
   bookConfig: FounderBook;
   isAdminOpen: boolean;
   isAdminAuthenticated: boolean;
-  openAdmin: () => void;
+  adminInitialTab: 'hero' | 'media' | 'logos' | 'stories' | 'book' | 'company' | 'backup';
+  setAdminInitialTab: (tab: 'hero' | 'media' | 'logos' | 'stories' | 'book' | 'company' | 'backup') => void;
+  openAdmin: (tab?: 'hero' | 'media' | 'logos' | 'stories' | 'book' | 'company' | 'backup') => void;
   closeAdmin: () => void;
   loginAdmin: (username: string, password: string) => boolean;
   logoutAdmin: () => void;
@@ -114,11 +118,12 @@ export interface CmsContextType {
   addGalleryItem: (item: Omit<GalleryItem, 'id' | 'date'>) => GalleryItem;
   updateGalleryItem: (id: string, updates: Partial<GalleryItem>) => void;
   deleteGalleryItem: (id: string) => void;
-  addClientLogo: (logo: Omit<ClientLogoItem, 'id'>) => ClientLogoItem;
-  deleteClientLogo: (id: string) => void;
-  addSuccessStory: (story: Omit<SuccessStoryItem, 'id' | 'date'>) => SuccessStoryItem;
-  updateSuccessStory: (id: string, updates: Partial<SuccessStoryItem>) => void;
-  deleteSuccessStory: (id: string) => void;
+  addClientLogo: (logo: Omit<ClientLogoItem, 'id'>) => Promise<ClientLogoItem> | ClientLogoItem;
+  updateClientLogo: (id: string, updates: Partial<ClientLogoItem>) => Promise<boolean> | void;
+  deleteClientLogo: (id: string) => Promise<void> | void;
+  addSuccessStory: (story: Omit<SuccessStoryItem, 'id' | 'date'>) => Promise<SuccessStoryItem> | SuccessStoryItem;
+  updateSuccessStory: (id: string, updates: Partial<SuccessStoryItem>) => Promise<boolean> | void;
+  deleteSuccessStory: (id: string) => Promise<void> | void;
   addBlogPost: (post: Omit<BlogPostItem, 'id' | 'publishedDate'>) => BlogPostItem;
   updateBlogPost: (id: string, updates: Partial<BlogPostItem>) => void;
   deleteBlogPost: (id: string) => void;
@@ -131,6 +136,7 @@ export interface CmsContextType {
   uploadStoryImageToStorage: (fileOrDataUrl: string | File, storyTitle?: string) => Promise<string>;
   uploadBookCoverToStorage: (fileOrDataUrl: string | File, bookTitle?: string) => Promise<string>;
   isDatabaseConnected: boolean;
+  isSavingToDatabase: boolean;
   lastDatabaseSync: Date | null;
   manualDatabaseSync: () => Promise<boolean>;
 }
@@ -140,8 +146,8 @@ const DEFAULT_BOOK_CONFIG: FounderBook = FOUNDER_BOOK;
 const DEFAULT_HERO_CONFIG: HeroConfig = {
   headline: 'Empowering success by making business processes run faster, easier, and better.',
   subheadline:
-    'Transforming ISO, Risk, GRC, and Sustainability requirements into high-performing, digitally-enabled operating systems across Kenya & East Africa.',
-  badgeText: 'KENYA & PAN-AFRICA ISO ADVISORY',
+    'Quality Centre transforms ISO, risk, GRC, and ESG/sustainability requirements into high-performing, digitally-enabled operating systems across Africa & beyond.',
+  badgeText: '',
   videoUrl:
     'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-with-graphs-and-data-31913-large.mp4',
   fallbackVideoUrl:
@@ -150,7 +156,7 @@ const DEFAULT_HERO_CONFIG: HeroConfig = {
   bgMode: 'video',
   videoOpacity: 0.35,
   ctaPrimaryText: 'Explore Solutions',
-  ctaSecondaryText: 'Book ISO Audit',
+  ctaSecondaryText: 'Talk to our expert',
 };
 
 const DEFAULT_COMPANY_CONFIG: CompanyConfig = {
@@ -260,12 +266,12 @@ const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
 ];
 
 const DEFAULT_CLIENT_LOGOS: ClientLogoItem[] = [
-  { id: 'logo-1', name: 'Kenya Commercial Bank', logoUrl: 'https://images.unsplash.com/photo-1541359902798-011504994843?auto=format&fit=crop&w=300&q=80', industry: 'Banking & Finance' },
-  { id: 'logo-2', name: 'East African Breweries', logoUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=300&q=80', industry: 'Manufacturing' },
-  { id: 'logo-3', name: 'Safaricom Telemetry', logoUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=300&q=80', industry: 'Telecommunications' },
-  { id: 'logo-4', name: 'Bamburi Cement', logoUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=300&q=80', industry: 'Construction' },
-  { id: 'logo-5', name: 'Equity Group Holdings', logoUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=300&q=80', industry: 'Financial Services' },
-  { id: 'logo-6', name: 'Nairobi Bottlers', logoUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=300&q=80', industry: 'FMCG' },
+  { id: 'logo-1', name: 'Kenya Commercial Bank', logoUrl: 'https://images.unsplash.com/photo-1541359902798-011504994843?auto=format&fit=crop&w=300&q=80', industry: 'Banking & Finance', caption: 'ISO 27001 & ISO 9001 Partner' },
+  { id: 'logo-2', name: 'East African Breweries', logoUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=300&q=80', industry: 'Manufacturing', caption: 'ISO 22000 & HACCP Certified' },
+  { id: 'logo-3', name: 'Safaricom Telemetry', logoUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=300&q=80', industry: 'Telecommunications', caption: 'ISO 22301 Business Continuity' },
+  { id: 'logo-4', name: 'Bamburi Cement', logoUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=300&q=80', industry: 'Construction', caption: 'ISO 14001 & ISO 45001 HSE' },
+  { id: 'logo-5', name: 'Equity Group Holdings', logoUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=300&q=80', industry: 'Financial Services', caption: 'ISO 37001 Anti-Bribery System' },
+  { id: 'logo-6', name: 'Nairobi Bottlers', logoUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=300&q=80', industry: 'FMCG', caption: 'ISO 9001 Operations Certified' },
 ];
 
 const DEFAULT_SUCCESS_STORIES: SuccessStoryItem[] = [
@@ -484,6 +490,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [blogPosts, setBlogPosts] = useState<BlogPostItem[]>(DEFAULT_BLOG_POSTS);
 
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+  const [adminInitialTab, setAdminInitialTab] = useState<'hero' | 'media' | 'logos' | 'stories' | 'book' | 'company' | 'backup'>('hero');
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
     try {
       return localStorage.getItem(STORAGE_KEYS.AUTH) === 'true';
@@ -493,9 +500,28 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isDatabaseConnected, setIsDatabaseConnected] = useState<boolean>(false);
+  const [isSavingToDatabase, setIsSavingToDatabase] = useState<boolean>(false);
   const [lastDatabaseSync, setLastDatabaseSync] = useState<Date | null>(null);
 
   const lastLocalUpdateRef = useRef<number>(0);
+  const broadcastRef = useRef<BroadcastChannel | null>(null);
+
+  // Synchronous refs to guarantee mutation handlers always have absolute latest state without stale closure traps
+  const heroConfigRef = useRef<HeroConfig>(DEFAULT_HERO_CONFIG);
+  const companyConfigRef = useRef<CompanyConfig>(DEFAULT_COMPANY_CONFIG);
+  const bookConfigRef = useRef<FounderBook>(DEFAULT_BOOK_CONFIG);
+  const galleryItemsRef = useRef<GalleryItem[]>(DEFAULT_GALLERY_ITEMS);
+  const clientLogosRef = useRef<ClientLogoItem[]>(DEFAULT_CLIENT_LOGOS);
+  const successStoriesRef = useRef<SuccessStoryItem[]>(DEFAULT_SUCCESS_STORIES);
+  const blogPostsRef = useRef<BlogPostItem[]>(DEFAULT_BLOG_POSTS);
+
+  useEffect(() => { heroConfigRef.current = heroConfig; }, [heroConfig]);
+  useEffect(() => { companyConfigRef.current = companyConfig; }, [companyConfig]);
+  useEffect(() => { bookConfigRef.current = bookConfig; }, [bookConfig]);
+  useEffect(() => { galleryItemsRef.current = galleryItems; }, [galleryItems]);
+  useEffect(() => { clientLogosRef.current = clientLogos; }, [clientLogos]);
+  useEffect(() => { successStoriesRef.current = successStories; }, [successStories]);
+  useEffect(() => { blogPostsRef.current = blogPosts; }, [blogPosts]);
 
   const getFullDatabaseSnapshot = (overrides?: Partial<{
     heroConfig: HeroConfig;
@@ -507,100 +533,150 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     bookConfig: FounderBook;
   }>) => {
     return {
-      heroConfig: overrides?.heroConfig || heroConfig,
-      companyConfig: overrides?.companyConfig || companyConfig,
-      clientLogos: overrides?.clientLogos || clientLogos,
-      successStories: overrides?.successStories || successStories,
-      galleryItems: overrides?.galleryItems || galleryItems,
-      blogPosts: overrides?.blogPosts || blogPosts,
-      bookConfig: overrides?.bookConfig || bookConfig,
+      heroConfig: overrides?.heroConfig || heroConfigRef.current,
+      companyConfig: overrides?.companyConfig || companyConfigRef.current,
+      clientLogos: overrides?.clientLogos || clientLogosRef.current,
+      successStories: overrides?.successStories || successStoriesRef.current,
+      galleryItems: overrides?.galleryItems || galleryItemsRef.current,
+      blogPosts: overrides?.blogPosts || blogPostsRef.current,
+      bookConfig: overrides?.bookConfig || bookConfigRef.current,
       lastUpdated: Date.now(),
     };
   };
 
-  const syncDatabaseToCloud = (snapshot: any) => {
-    lastLocalUpdateRef.current = snapshot.lastUpdated || Date.now();
-    saveLiveDatabaseToSupabase(snapshot).catch(() => {});
-    fetch('/api/cms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(snapshot),
-    }).catch(() => {});
+  const applyDatabaseSnapshot = (latestData: any) => {
+    if (!latestData) return;
+    setIsDatabaseConnected(true);
+    setLastDatabaseSync(new Date());
+
+    if (latestData.companyConfig) {
+      companyConfigRef.current = latestData.companyConfig;
+      setCompanyConfig(latestData.companyConfig);
+    }
+    if (latestData.heroConfig) {
+      heroConfigRef.current = latestData.heroConfig;
+      setHeroConfig(latestData.heroConfig);
+    }
+    if (Array.isArray(latestData.clientLogos)) {
+      clientLogosRef.current = latestData.clientLogos;
+      setClientLogos(latestData.clientLogos);
+    }
+    if (Array.isArray(latestData.successStories)) {
+      successStoriesRef.current = latestData.successStories;
+      setSuccessStories(latestData.successStories);
+    }
+    if (Array.isArray(latestData.galleryItems)) {
+      galleryItemsRef.current = latestData.galleryItems;
+      setGalleryItems(latestData.galleryItems);
+    }
+    if (Array.isArray(latestData.blogPosts)) {
+      blogPostsRef.current = latestData.blogPosts;
+      setBlogPosts(latestData.blogPosts);
+    }
+    if (latestData.bookConfig) {
+      bookConfigRef.current = latestData.bookConfig;
+      setBookConfig(latestData.bookConfig);
+    }
   };
 
-  // Fetch full state from backend persistent server database and live Supabase cloud database
+  const syncDatabaseToCloud = async (snapshot: any): Promise<boolean> => {
+    const updateTime = snapshot.lastUpdated || Date.now();
+    lastLocalUpdateRef.current = updateTime;
+    setIsSavingToDatabase(true);
+
+    // Instant local cross-tab broadcast
+    try {
+      if (broadcastRef.current) {
+        broadcastRef.current.postMessage({ type: 'SYNC_CMS', snapshot });
+      }
+    } catch {}
+
+    let saved = false;
+    try {
+      // 1. Direct Cloud Persistence to Supabase (site-data/cms-database.json)
+      // This is the global single source of truth across all devices, platforms, and URLs
+      const cloudOk = await saveLiveDatabaseToSupabase(snapshot);
+      if (cloudOk) {
+        saved = true;
+      }
+
+      // 2. Also notify backend Express container if available in current runtime
+      try {
+        const res = await fetch('/api/cms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
+          body: JSON.stringify(snapshot),
+        });
+        if (res.ok) {
+          saved = true;
+        }
+      } catch {
+        // Express proxy optional
+      }
+
+      if (saved) {
+        setIsDatabaseConnected(true);
+        setLastDatabaseSync(new Date());
+      }
+    } catch (e) {
+      console.warn('Sync database error:', e);
+    } finally {
+      setIsSavingToDatabase(false);
+    }
+    return saved;
+  };
+
+  // Fetch full state directly from the live database
   const fetchFromServer = async () => {
     let latestData: any = null;
 
     // 1. Fetch directly from live Supabase Cloud Database (global source of truth across all devices)
     try {
       const supabaseDb = await fetchLiveDatabase();
-      if (supabaseDb) {
+      if (supabaseDb && (supabaseDb.clientLogos || supabaseDb.companyConfig || supabaseDb.heroConfig)) {
         latestData = supabaseDb;
       }
     } catch (err) {
-      console.warn('Supabase cloud database check notice:', err);
+      console.warn('Supabase cloud database fetch notice:', err);
     }
 
-    // 2. Also check local server /api/cms in full-stack runtime
-    try {
-      const res = await fetch('/api/cms');
-      if (res.ok) {
-        const apiData = await res.json();
-        if (apiData) {
-          if (!latestData) {
+    // 2. If direct fetch was blocked by client network (e.g. adblocker), query server /api/cms (which also reads live from database)
+    if (!latestData) {
+      try {
+        const res = await fetch(`/api/cms?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
+        });
+        if (res.ok) {
+          const apiData = await res.json();
+          if (apiData && (apiData.clientLogos || apiData.companyConfig || apiData.heroConfig)) {
             latestData = apiData;
-          } else {
-            const supabaseTime = Number(latestData.lastUpdated || 0);
-            const apiTime = Number(apiData.lastUpdated || 0);
-            if (apiTime >= supabaseTime) {
-              latestData = apiData;
-            }
           }
         }
+      } catch (err) {
+        // /api/cms notice
       }
-    } catch (err) {
-      // /api/cms notice
     }
 
     if (latestData) {
-      setIsDatabaseConnected(true);
-      setLastDatabaseSync(new Date());
-
       const remoteTime = Number(latestData.lastUpdated || 0);
       const localEditTime = lastLocalUpdateRef.current;
 
-      // If a local edit was made recently (within last 8 seconds) and the remote database returns an older timestamp, ignore the stale response to prevent reverting admin changes
-      if (localEditTime > 0 && Date.now() - localEditTime < 8000 && remoteTime < localEditTime) {
+      // If a local edit was made within the last 1.5 seconds and remote is strictly older, ignore to prevent race-condition rollback
+      if (localEditTime > 0 && Date.now() - localEditTime < 1500 && remoteTime < localEditTime) {
         return;
       }
 
-      if (latestData.companyConfig) {
-        const cfg: CompanyConfig = { ...latestData.companyConfig };
-        if (!cfg.logoUrl || cfg.logoUrl.startsWith('/uploads/') || cfg.logoUrl === '') {
-          cfg.logoUrl = LIVE_SUPABASE_LOGO_URL;
-          cfg.logoType = 'custom';
-        }
-        setCompanyConfig(cfg);
-      }
-      if (latestData.heroConfig) {
-        setHeroConfig(latestData.heroConfig);
-      }
-      if (Array.isArray(latestData.clientLogos)) {
-        setClientLogos(latestData.clientLogos);
-      }
-      if (Array.isArray(latestData.successStories)) {
-        setSuccessStories(latestData.successStories);
-      }
-      if (Array.isArray(latestData.galleryItems)) {
-        setGalleryItems(latestData.galleryItems);
-      }
-      if (Array.isArray(latestData.blogPosts)) {
-        setBlogPosts(latestData.blogPosts);
-      }
-      if (latestData.bookConfig) {
-        setBookConfig(latestData.bookConfig);
-      }
+      applyDatabaseSnapshot(latestData);
+      setIsDatabaseConnected(true);
+      setLastDatabaseSync(new Date());
     } else {
       setIsDatabaseConnected(false);
     }
@@ -615,17 +691,48 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     } catch {}
 
+    // Initialize cross-tab BroadcastChannel
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel('qc_cms_live_sync');
+        broadcastRef.current = channel;
+        channel.onmessage = (event) => {
+          if (event.data?.type === 'SYNC_CMS' && event.data.snapshot) {
+            applyDatabaseSnapshot(event.data.snapshot);
+          }
+        };
+      }
+    } catch {}
+
     fetchFromServer();
-    const interval = setInterval(fetchFromServer, 3000);
-    const onFocus = () => fetchFromServer();
-    window.addEventListener('focus', onFocus);
+    const interval = setInterval(fetchFromServer, 2500);
+
+    const onActivity = () => fetchFromServer();
+    window.addEventListener('focus', onActivity);
+    window.addEventListener('online', onActivity);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchFromServer();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', onActivity);
+      window.removeEventListener('online', onActivity);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      try {
+        broadcastRef.current?.close();
+      } catch {}
     };
   }, []);
 
-  const openAdmin = () => setIsAdminOpen(true);
+  const openAdmin = (tab?: 'hero' | 'media' | 'logos' | 'stories' | 'book' | 'company' | 'backup') => {
+    if (tab) setAdminInitialTab(tab);
+    setIsAdminOpen(true);
+  };
   const closeAdmin = () => setIsAdminOpen(false);
 
   const loginAdmin = (username: string, password: string): boolean => {
@@ -652,7 +759,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateHeroConfig = (updates: Partial<HeroConfig>) => {
-    const updated = { ...heroConfig, ...updates };
+    const updated = { ...heroConfigRef.current, ...updates };
+    heroConfigRef.current = updated;
     setHeroConfig(updated);
     const snapshot = getFullDatabaseSnapshot({ heroConfig: updated });
     syncDatabaseToCloud(snapshot);
@@ -664,7 +772,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateCompanyConfig = (updates: Partial<CompanyConfig>) => {
-    const updated = { ...companyConfig, ...updates };
+    const updated = { ...companyConfigRef.current, ...updates };
+    companyConfigRef.current = updated;
     setCompanyConfig(updated);
     const snapshot = getFullDatabaseSnapshot({ companyConfig: updated });
     syncDatabaseToCloud(snapshot);
@@ -676,7 +785,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateBookConfig = (updates: Partial<FounderBook>) => {
-    const updated = { ...bookConfig, ...updates };
+    const updated = { ...bookConfigRef.current, ...updates };
+    bookConfigRef.current = updated;
     setBookConfig(updated);
     const snapshot = getFullDatabaseSnapshot({ bookConfig: updated });
     syncDatabaseToCloud(snapshot);
@@ -766,13 +876,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: new Date().toISOString().split('T')[0],
       thumbnailUrl: item.thumbnailUrl || item.mediaUrl,
     };
-    let updatedList: GalleryItem[] = [];
-    setGalleryItems((prev) => {
-      updatedList = [newItem, ...prev];
-      return updatedList;
-    });
+    const nextGallery = [newItem, ...galleryItemsRef.current];
+    galleryItemsRef.current = nextGallery;
+    setGalleryItems(nextGallery);
 
-    const snapshot = getFullDatabaseSnapshot({ galleryItems: updatedList });
+    const snapshot = getFullDatabaseSnapshot({ galleryItems: nextGallery });
     syncDatabaseToCloud(snapshot);
 
     fetch('/api/gallery', {
@@ -784,24 +892,20 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateGalleryItem = (id: string, updates: Partial<GalleryItem>) => {
-    let updatedList: GalleryItem[] = [];
-    setGalleryItems((prev) => {
-      updatedList = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
-      return updatedList;
-    });
+    const nextGallery = galleryItemsRef.current.map((item) => (item.id === id ? { ...item, ...updates } : item));
+    galleryItemsRef.current = nextGallery;
+    setGalleryItems(nextGallery);
 
-    const snapshot = getFullDatabaseSnapshot({ galleryItems: updatedList });
+    const snapshot = getFullDatabaseSnapshot({ galleryItems: nextGallery });
     syncDatabaseToCloud(snapshot);
   };
 
   const deleteGalleryItem = (id: string) => {
-    let updatedList: GalleryItem[] = [];
-    setGalleryItems((prev) => {
-      updatedList = prev.filter((item) => item.id !== id);
-      return updatedList;
-    });
+    const nextGallery = galleryItemsRef.current.filter((item) => item.id !== id);
+    galleryItemsRef.current = nextGallery;
+    setGalleryItems(nextGallery);
 
-    const snapshot = getFullDatabaseSnapshot({ galleryItems: updatedList });
+    const snapshot = getFullDatabaseSnapshot({ galleryItems: nextGallery });
     syncDatabaseToCloud(snapshot);
 
     fetch(`/api/gallery/${id}`, { method: 'DELETE' }).catch(() => {});
@@ -815,61 +919,69 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return uploadStoryImageToLiveStorage(fileOrDataUrl, storyTitle);
   };
 
-  const addClientLogo = (logo: Omit<ClientLogoItem, 'id'>): ClientLogoItem => {
+  const addClientLogo = async (logo: Omit<ClientLogoItem, 'id'>): Promise<ClientLogoItem> => {
     const tempId = `logo-${Date.now()}`;
+    let finalUrl = logo.logoUrl;
+
+    // If image is a local data URL, upload directly to Supabase cloud storage first
+    if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:')) {
+      try {
+        finalUrl = await uploadClientLogoToLiveStorage(finalUrl, logo.name);
+      } catch (err) {
+        console.warn('Direct Supabase logo upload notice on add:', err);
+      }
+    }
+
     const newLogo: ClientLogoItem = {
       ...logo,
+      logoUrl: finalUrl,
       id: tempId,
     };
-    let updatedList: ClientLogoItem[] = [];
-    setClientLogos((prev) => {
-      updatedList = [newLogo, ...prev];
-      return updatedList;
-    });
 
-    const snapshot = getFullDatabaseSnapshot({ clientLogos: updatedList });
-    syncDatabaseToCloud(snapshot);
+    const nextLogos = [newLogo, ...clientLogosRef.current.filter((l) => l.id !== tempId)];
+    clientLogosRef.current = nextLogos;
+    setClientLogos(nextLogos);
 
-    (async () => {
-      let finalUrl = logo.logoUrl;
-      if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
-        try {
-          finalUrl = await uploadClientLogoToLiveStorage(finalUrl, logo.name);
-          let listWithLogo: ClientLogoItem[] = [];
-          setClientLogos((prev) => {
-            listWithLogo = prev.map((item) => (item.id === tempId ? { ...item, logoUrl: finalUrl } : item));
-            return listWithLogo;
-          });
-          syncDatabaseToCloud(getFullDatabaseSnapshot({ clientLogos: listWithLogo }));
-        } catch (err) {
-          console.warn('Direct Supabase logo upload notice:', err);
-        }
-      }
-
-      fetch('/api/client-logos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newLogo, logoUrl: finalUrl }),
-      }).catch(() => {});
-    })();
+    const snapshot = getFullDatabaseSnapshot({ clientLogos: nextLogos });
+    await syncDatabaseToCloud(snapshot);
 
     return newLogo;
   };
 
-  const deleteClientLogo = (id: string) => {
-    let updatedList: ClientLogoItem[] = [];
-    setClientLogos((prev) => {
-      updatedList = prev.filter((item) => item.id !== id);
-      return updatedList;
-    });
+  const updateClientLogo = async (id: string, updates: Partial<ClientLogoItem>): Promise<boolean> => {
+    let finalUrl = updates.logoUrl;
 
-    const snapshot = getFullDatabaseSnapshot({ clientLogos: updatedList });
-    syncDatabaseToCloud(snapshot);
+    // If image is a local data URL, upload directly to Supabase cloud storage first
+    if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:')) {
+      try {
+        finalUrl = await uploadClientLogoToLiveStorage(finalUrl, updates.name || 'client');
+      } catch (err) {
+        console.warn('Direct Supabase logo upload notice on update:', err);
+      }
+    }
 
-    fetch(`/api/client-logos/${id}`, { method: 'DELETE' }).catch(() => {});
+    const nextLogos = clientLogosRef.current.map((item) =>
+      item.id === id ? { ...item, ...updates, ...(finalUrl ? { logoUrl: finalUrl } : {}) } : item
+    );
+    clientLogosRef.current = nextLogos;
+    setClientLogos(nextLogos);
+
+    const snapshot = getFullDatabaseSnapshot({ clientLogos: nextLogos });
+    await syncDatabaseToCloud(snapshot);
+
+    return true;
   };
 
-  const addSuccessStory = (story: Omit<SuccessStoryItem, 'id' | 'date'>): SuccessStoryItem => {
+  const deleteClientLogo = async (id: string) => {
+    const nextLogos = clientLogosRef.current.filter((item) => item.id !== id);
+    clientLogosRef.current = nextLogos;
+    setClientLogos(nextLogos);
+
+    const snapshot = getFullDatabaseSnapshot({ clientLogos: nextLogos });
+    await syncDatabaseToCloud(snapshot);
+  };
+
+  const addSuccessStory = async (story: Omit<SuccessStoryItem, 'id' | 'date'>): Promise<SuccessStoryItem> => {
     const tempId = `story-${Date.now()}`;
     const newStory: SuccessStoryItem = {
       ...story,
@@ -877,75 +989,132 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: new Date().toISOString().split('T')[0],
     };
 
-    let updatedList: SuccessStoryItem[] = [];
+    const nextStories = [newStory, ...successStoriesRef.current];
+    successStoriesRef.current = nextStories;
+    setSuccessStories(nextStories);
 
-    setSuccessStories((prev) => {
-      updatedList = [newStory, ...prev];
-      return updatedList;
-    });
-
-    syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: updatedList }));
+    const snapshot = getFullDatabaseSnapshot({ successStories: nextStories });
+    await syncDatabaseToCloud(snapshot);
 
     (async () => {
       let finalUrl = story.imageUrl;
+      let finalPdfUrl = story.pdfUrl;
+      let hasAsyncUpload = false;
+
       if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
         try {
           finalUrl = await uploadStoryImageToLiveStorage(finalUrl, story.clientName);
-          let listWithImage: SuccessStoryItem[] = [];
-          setSuccessStories((prev) => {
-            listWithImage = prev.map((item) => (item.id === tempId ? { ...item, imageUrl: finalUrl } : item));
-            return listWithImage;
-          });
-          syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: listWithImage }));
+          hasAsyncUpload = true;
         } catch (err) {
           console.warn('Direct Supabase story image upload notice:', err);
         }
       }
 
+      if (finalPdfUrl && typeof finalPdfUrl === 'string' && finalPdfUrl.startsWith('data:')) {
+        try {
+          finalPdfUrl = await uploadPdfToLiveStorage(finalPdfUrl, story.clientName);
+          hasAsyncUpload = true;
+        } catch (e) {
+          console.warn('Story PDF upload notice:', e);
+        }
+      }
+
+      if (hasAsyncUpload) {
+        const currentList = successStoriesRef.current;
+        const listWithImage = currentList.map((item) =>
+          item.id === tempId ? { ...item, imageUrl: finalUrl, pdfUrl: finalPdfUrl } : item
+        );
+        successStoriesRef.current = listWithImage;
+        setSuccessStories(listWithImage);
+        await syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: listWithImage }));
+      }
+
       fetch('/api/success-stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newStory, imageUrl: finalUrl }),
+        body: JSON.stringify({ ...newStory, imageUrl: finalUrl, pdfUrl: finalPdfUrl }),
       }).catch(() => {});
     })();
 
     return newStory;
   };
 
-  const updateSuccessStory = (id: string, updates: Partial<SuccessStoryItem>) => {
-    let nextStories: SuccessStoryItem[] = [];
-    let updatedStory: SuccessStoryItem | undefined;
+  const updateSuccessStory = async (id: string, updates: Partial<SuccessStoryItem>): Promise<boolean> => {
+    const currentList = successStoriesRef.current;
+    let targetStory: SuccessStoryItem | undefined;
 
-    setSuccessStories((prev) => {
-      nextStories = prev.map((item) => {
-        if (item.id === id) {
-          updatedStory = { ...item, ...updates };
-          return updatedStory;
-        }
-        return item;
-      });
-      return nextStories;
+    const nextStories = currentList.map((item) => {
+      if (item.id === id) {
+        targetStory = { ...item, ...updates };
+        return targetStory;
+      }
+      return item;
     });
 
-    if (updatedStory) {
-      syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: nextStories }));
+    if (!targetStory) {
+      console.warn('Target story not found for update:', id);
+      return false;
+    }
+
+    // Immediately update memory ref and React state
+    successStoriesRef.current = nextStories;
+    setSuccessStories(nextStories);
+
+    // Immediately persist updated collection to the persistent database
+    const snapshot = getFullDatabaseSnapshot({ successStories: nextStories });
+    const saved = await syncDatabaseToCloud(snapshot);
+
+    // Asynchronously handle any uploaded base64 images or PDFs to convert them to permanent Supabase URLs
+    (async () => {
+      let finalImageUrl = targetStory?.imageUrl;
+      let finalPdfUrl = targetStory?.pdfUrl;
+      let hasAsyncUpload = false;
+
+      if (finalImageUrl && typeof finalImageUrl === 'string' && finalImageUrl.startsWith('data:image/')) {
+        try {
+          finalImageUrl = await uploadStoryImageToLiveStorage(finalImageUrl, targetStory?.clientName);
+          hasAsyncUpload = true;
+        } catch (e) {
+          console.warn('Story image upload notice:', e);
+        }
+      }
+
+      if (finalPdfUrl && typeof finalPdfUrl === 'string' && finalPdfUrl.startsWith('data:')) {
+        try {
+          finalPdfUrl = await uploadPdfToLiveStorage(finalPdfUrl, targetStory?.clientName);
+          hasAsyncUpload = true;
+        } catch (e) {
+          console.warn('Story PDF upload notice:', e);
+        }
+      }
+
+      if (hasAsyncUpload) {
+        const currentNow = successStoriesRef.current;
+        const updatedList = currentNow.map((item) =>
+          item.id === id ? { ...item, imageUrl: finalImageUrl, pdfUrl: finalPdfUrl } : item
+        );
+        successStoriesRef.current = updatedList;
+        setSuccessStories(updatedList);
+        await syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: updatedList }));
+      }
 
       fetch('/api/success-stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedStory),
+        body: JSON.stringify({ ...targetStory, imageUrl: finalImageUrl, pdfUrl: finalPdfUrl }),
       }).catch(() => {});
-    }
+    })();
+
+    return saved;
   };
 
-  const deleteSuccessStory = (id: string) => {
-    let nextStories: SuccessStoryItem[] = [];
-    setSuccessStories((prev) => {
-      nextStories = prev.filter((item) => item.id !== id);
-      return nextStories;
-    });
+  const deleteSuccessStory = async (id: string) => {
+    const nextStories = successStoriesRef.current.filter((item) => item.id !== id);
+    successStoriesRef.current = nextStories;
+    setSuccessStories(nextStories);
 
-    syncDatabaseToCloud(getFullDatabaseSnapshot({ successStories: nextStories }));
+    const snapshot = getFullDatabaseSnapshot({ successStories: nextStories });
+    await syncDatabaseToCloud(snapshot);
 
     fetch(`/api/success-stories/${id}`, { method: 'DELETE' }).catch(() => {});
   };
@@ -956,40 +1125,38 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `blog-${Date.now()}`,
       publishedDate: new Date().toISOString().split('T')[0],
     };
-    let updatedPosts: BlogPostItem[] = [];
-    setBlogPosts((prev) => {
-      updatedPosts = [newPost, ...prev];
-      return updatedPosts;
-    });
-    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: updatedPosts }));
+    const nextPosts = [newPost, ...blogPostsRef.current];
+    blogPostsRef.current = nextPosts;
+    setBlogPosts(nextPosts);
+
+    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: nextPosts }));
     return newPost;
   };
 
   const updateBlogPost = (id: string, updates: Partial<BlogPostItem>) => {
-    let updatedPosts: BlogPostItem[] = [];
-    setBlogPosts((prev) => {
-      updatedPosts = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
-      return updatedPosts;
-    });
-    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: updatedPosts }));
+    const nextPosts = blogPostsRef.current.map((p) => (p.id === id ? { ...p, ...updates } : p));
+    blogPostsRef.current = nextPosts;
+    setBlogPosts(nextPosts);
+
+    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: nextPosts }));
   };
 
   const deleteBlogPost = (id: string) => {
-    let updatedPosts: BlogPostItem[] = [];
-    setBlogPosts((prev) => {
-      updatedPosts = prev.filter((p) => p.id !== id);
-      return updatedPosts;
-    });
-    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: updatedPosts }));
+    const nextPosts = blogPostsRef.current.filter((p) => p.id !== id);
+    blogPostsRef.current = nextPosts;
+    setBlogPosts(nextPosts);
+
+    syncDatabaseToCloud(getFullDatabaseSnapshot({ blogPosts: nextPosts }));
   };
 
   const setMediaAsHero = (type: 'video' | 'infographic', url: string) => {
-    let updatedHero = heroConfig;
+    let updatedHero = heroConfigRef.current;
     if (type === 'video') {
-      updatedHero = { ...heroConfig, videoUrl: url, bgMode: 'video' };
+      updatedHero = { ...heroConfigRef.current, videoUrl: url, bgMode: 'video' };
     } else {
-      updatedHero = { ...heroConfig, infographicUrl: url, bgMode: 'infographic' };
+      updatedHero = { ...heroConfigRef.current, infographicUrl: url, bgMode: 'infographic' };
     }
+    heroConfigRef.current = updatedHero;
     setHeroConfig(updatedHero);
     const snapshot = getFullDatabaseSnapshot({ heroConfig: updatedHero });
     syncDatabaseToCloud(snapshot);
@@ -1070,8 +1237,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const manualDatabaseSync = async (): Promise<boolean> => {
     try {
       lastLocalUpdateRef.current = 0;
-      const snapshot = getFullDatabaseSnapshot();
-      syncDatabaseToCloud(snapshot);
       await fetchFromServer();
       setLastDatabaseSync(new Date());
       setIsDatabaseConnected(true);
@@ -1094,6 +1259,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bookConfig,
         isAdminOpen,
         isAdminAuthenticated,
+        adminInitialTab,
+        setAdminInitialTab,
         openAdmin,
         closeAdmin,
         loginAdmin,
@@ -1105,6 +1272,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateGalleryItem,
         deleteGalleryItem,
         addClientLogo,
+        updateClientLogo,
         deleteClientLogo,
         addSuccessStory,
         updateSuccessStory,
@@ -1121,6 +1289,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         uploadStoryImageToStorage,
         uploadBookCoverToStorage,
         isDatabaseConnected,
+        isSavingToDatabase,
         lastDatabaseSync,
         manualDatabaseSync,
       }}

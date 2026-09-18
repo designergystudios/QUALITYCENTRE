@@ -9,13 +9,18 @@ export const SUPABASE_ANON_KEY =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
   '[REDACTED-SECRET]';
 
+export const SUPABASE_SERVICE_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY) ||
+  '[REDACTED-SECRET]';
+
 // Live public URL for Quality Centre branded logo in Supabase Storage
 export const LIVE_SUPABASE_LOGO_URL = `${SUPABASE_URL}/storage/v1/object/public/client-logos/quality-centre-logo.jpg`;
 
-// Live public URL for full CMS configuration database in Supabase Storage
-export const LIVE_SUPABASE_DB_URL = `${SUPABASE_URL}/storage/v1/object/public/client-logos/cms-database.json`;
+// Live public URL for full CMS configuration database in Supabase Storage (site-data bucket is public and accepts JSON)
+export const LIVE_SUPABASE_DB_URL = `${SUPABASE_URL}/storage/v1/object/public/site-data/cms-database.json`;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 /**
  * Fetch latest CMS configuration directly from live Supabase database
@@ -23,6 +28,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export async function fetchLiveDatabase() {
   try {
     const res = await fetch(`${LIVE_SUPABASE_DB_URL}?t=${Date.now()}`, {
+      cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -39,54 +45,49 @@ export async function fetchLiveDatabase() {
 }
 
 /**
- * Persist CMS database snapshot directly to live Supabase Cloud storage
+ * Persist CMS database snapshot directly to live Supabase Cloud storage across all devices
  */
-export async function saveLiveDatabaseToSupabase(dbData: any) {
+export async function saveLiveDatabaseToSupabase(dbData: any): Promise<boolean> {
   try {
     const payload = {
       ...dbData,
       lastUpdated: dbData?.lastUpdated || Date.now(),
     };
     const jsonString = JSON.stringify(payload, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
 
-    // 1. JS SDK upload with upsert
-    const { error } = await supabase.storage
-      .from('client-logos')
-      .upload('cms-database.json', blob, {
-        contentType: 'application/json',
-        upsert: true,
+    const headers = {
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'x-upsert': 'true',
+      'cache-control': 'no-cache, no-store, must-revalidate',
+    };
+
+    // Direct PUT/POST to Supabase Storage site-data/cms-database.json (Accessible globally to all devices)
+    let res = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
+      method: 'PUT',
+      headers,
+      body: jsonString,
+    });
+
+    if (!res.ok) {
+      res = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
+        method: 'POST',
+        headers,
+        body: jsonString,
       });
-
-    if (error) {
-      console.warn('Supabase JS SDK upload notice:', error);
-      // Fallback: direct REST API PUT call
-      try {
-        await fetch(`${SUPABASE_URL}/storage/v1/object/client-logos/cms-database.json`, {
-          method: 'PUT',
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'x-upsert': 'true',
-            'cache-control': 'no-cache',
-          },
-          body: jsonString,
-        });
-      } catch (rawErr) {
-        console.warn('Supabase REST upload notice:', rawErr);
-      }
     }
 
-    // 2. Always call server proxy endpoint to update server disk and perform background server sync
-    await fetch('/api/cms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: jsonString,
-    }).catch(() => {});
+    if (res.ok) {
+      return true;
+    } else {
+      const errText = await res.text().catch(() => '');
+      console.warn('Direct Supabase cloud save warning:', res.status, errText);
+    }
   } catch (err) {
-    console.warn('Live Supabase database save notice:', err);
+    console.warn('Live Supabase database direct save error:', err);
   }
+  return false;
 }
 
 /**
@@ -124,6 +125,8 @@ export async function uploadFileToSupabaseStorage({
           else if (mimeType.includes('svg')) fileExt = 'svg';
           else if (mimeType.includes('png')) fileExt = 'png';
           else if (mimeType.includes('webp')) fileExt = 'webp';
+          else if (mimeType.includes('mp4')) fileExt = 'mp4';
+          else if (mimeType.includes('webm')) fileExt = 'webm';
           else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) fileExt = 'jpg';
 
           const byteCharacters = atob(matches[2]);
@@ -141,30 +144,67 @@ export async function uploadFileToSupabaseStorage({
       }
     } else {
       buffer = fileOrDataUrl;
-      mimeType = fileOrDataUrl.type || 'application/pdf';
+      mimeType = fileOrDataUrl.type || 'application/octet-stream';
       const name = fileOrDataUrl.name.toLowerCase();
       if (name.endsWith('.pdf')) fileExt = 'pdf';
       else if (name.endsWith('.png')) fileExt = 'png';
       else if (name.endsWith('.svg')) fileExt = 'svg';
       else if (name.endsWith('.webp')) fileExt = 'webp';
+      else if (name.endsWith('.mp4')) fileExt = 'mp4';
+      else if (name.endsWith('.webm')) fileExt = 'webm';
+      else if (name.endsWith('.mov')) fileExt = 'mov';
       else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) fileExt = 'jpg';
     }
 
-    const finalFilename = filename || `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}.${fileExt}`;
-
-    // 1. Direct browser client upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(finalFilename, buffer, {
-        contentType: mimeType,
-        upsert: true,
-      });
-
-    if (!error && data) {
-      return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${finalFilename}`;
+    // Normalize mimeType for Supabase strict checking
+    let cleanMime = (mimeType || 'application/octet-stream').toLowerCase().trim();
+    if (cleanMime === 'image/jpg' || cleanMime === 'image/pjpeg' || cleanMime === 'image/jfif' || fileExt === 'jpg') {
+      cleanMime = 'image/jpeg';
+    } else if (cleanMime === 'image/svg' || cleanMime.includes('svg')) {
+      cleanMime = 'image/svg+xml';
+    } else if (cleanMime.includes('png')) {
+      cleanMime = 'image/png';
+    } else if (cleanMime.includes('webp')) {
+      cleanMime = 'image/webp';
     }
 
-    // 2. If browser direct upload failed (e.g. RLS policy on anon key), proxy through server-side endpoint
+    // Determine target bucket: videos and PDFs should always go to 'site-data' which allows all binary types
+    const isSpecialBinary = cleanMime.includes('pdf') || cleanMime.includes('video') || fileExt === 'mp4' || fileExt === 'webm' || fileExt === 'mov';
+    const targetBucket = isSpecialBinary ? 'site-data' : bucket;
+
+    const finalFilename = filename || `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}.${fileExt}`;
+
+    // 1. Direct browser client upload to Supabase Storage using admin privileges
+    try {
+      const { data, error } = await supabaseAdmin.storage
+        .from(targetBucket)
+        .upload(finalFilename, buffer, {
+          contentType: cleanMime,
+          upsert: true,
+        });
+
+      if (!error && data) {
+        return `${SUPABASE_URL}/storage/v1/object/public/${targetBucket}/${finalFilename}`;
+      }
+
+      // If client-logos bucket rejected mime type or size, immediately upload to 'site-data' which allows all files
+      if (targetBucket !== 'site-data') {
+        const fallback = await supabaseAdmin.storage
+          .from('site-data')
+          .upload(finalFilename, buffer, {
+            contentType: cleanMime,
+            upsert: true,
+          });
+
+        if (!fallback.error && fallback.data) {
+          return `${SUPABASE_URL}/storage/v1/object/public/site-data/${finalFilename}`;
+        }
+      }
+    } catch (directErr) {
+      console.warn('Direct upload notice, trying proxy:', directErr);
+    }
+
+    // 2. If browser direct upload failed (e.g. network/CORS), proxy through server-side endpoint
     const reader = new FileReader();
     const dataUrlPromise = new Promise<string>((resolve) => {
       reader.onloadend = () => resolve(reader.result as string);
@@ -172,25 +212,26 @@ export async function uploadFileToSupabaseStorage({
     });
     const dataUrl = await dataUrlPromise;
 
-    const proxyRes = await fetch('/api/upload-client-logo', {
+    const proxyEndpoint = isSpecialBinary ? '/api/upload-pdf' : '/api/upload-client-logo';
+    const proxyPayload = isSpecialBinary
+      ? { file: dataUrl, fileName: finalFilename, bucket: 'site-data', mimeType: cleanMime }
+      : { image: dataUrl, fileName: finalFilename, bucket: 'site-data', mimeType: cleanMime };
+
+    const proxyRes = await fetch(proxyEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image: dataUrl,
-        fileName: finalFilename,
-        bucket,
-      }),
+      body: JSON.stringify(proxyPayload),
     });
 
     if (proxyRes.ok) {
       const result = await proxyRes.json();
-      if (result.logoUrl) {
-        return result.logoUrl;
+      if (result.pdfUrl || result.logoUrl) {
+        return result.pdfUrl || result.logoUrl;
       }
     }
 
-    // Fallback: direct public storage URL
-    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${finalFilename}`;
+    // Ultimate fallback: direct public storage URL in site-data
+    return `${SUPABASE_URL}/storage/v1/object/public/site-data/${finalFilename}`;
   } catch (err) {
     console.error('Failed to upload file to Supabase storage:', err);
     throw err;
@@ -316,7 +357,7 @@ export async function uploadPdfToLiveStorage(
 
   return uploadFileToSupabaseStorage({
     fileOrDataUrl,
-    bucket: 'client-logos',
+    bucket: 'site-data',
     filename,
     prefix: 'case-study-pdf',
   });

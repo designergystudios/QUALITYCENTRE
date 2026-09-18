@@ -13,7 +13,7 @@ export const COMPANY_DETAILS = {
   legalName: 'Quality Centre Limited (Kenya)',
   tagline: 'Empowering success by making business processes run faster, easier, and better.',
   subheadline:
-    'Transforming ISO, Risk, GRC, and Sustainability requirements into high-performing, digitally-enabled operating systems across Kenya & Africa.',
+    'Quality Centre transforms ISO, risk, GRC, and ESG/sustainability requirements into high-performing, digitally-enabled operating systems across Africa & beyond.',
   founded: '1998',
   experienceYears: '26+',
   headquarters: 'Nairobi, Kenya',

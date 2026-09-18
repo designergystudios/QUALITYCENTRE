@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useCms, GalleryItem } from '../context/CmsContext';
-import { uploadPdfToLiveStorage } from '../lib/supabase';
+import { uploadPdfToLiveStorage, uploadFileToSupabaseStorage } from '../lib/supabase';
 
 export const AdminBackend: React.FC = () => {
   const { isDark } = useTheme();
@@ -54,6 +54,7 @@ export const AdminBackend: React.FC = () => {
     updateGalleryItem,
     deleteGalleryItem,
     addClientLogo,
+    updateClientLogo,
     deleteClientLogo,
     addSuccessStory,
     updateSuccessStory,
@@ -69,16 +70,26 @@ export const AdminBackend: React.FC = () => {
     bookConfig,
     updateBookConfig,
     isDatabaseConnected,
+    isSavingToDatabase,
     lastDatabaseSync,
     manualDatabaseSync,
+    adminInitialTab,
   } = useCms();
 
-  const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'logos' | 'stories' | 'book' | 'company' | 'backup'>('hero');
+  const [activeTab, setActiveTab] = useState<'hero' | 'media' | 'logos' | 'stories' | 'book' | 'company' | 'backup'>(adminInitialTab || 'hero');
+
+  useEffect(() => {
+    if (adminInitialTab) {
+      setActiveTab(adminInitialTab);
+    }
+  }, [adminInitialTab, isAdminOpen]);
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const [isManualSyncing, setIsManualSyncing] = useState(false);
+  const [isSavingStory, setIsSavingStory] = useState(false);
+  const [storyFormError, setStoryFormError] = useState<string | null>(null);
 
   const handleDatabaseSync = async () => {
     setIsManualSyncing(true);
@@ -113,10 +124,14 @@ export const AdminBackend: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Client Logo upload state
+  // Client Logo upload & edit state
+  const [editingLogoId, setEditingLogoId] = useState<string | null>(null);
   const [newLogoName, setNewLogoName] = useState('');
   const [newLogoIndustry, setNewLogoIndustry] = useState('');
+  const [newLogoCaption, setNewLogoCaption] = useState('');
   const [newLogoUrl, setNewLogoUrl] = useState('');
+  const [quickReplaceClientId, setQuickReplaceClientId] = useState<string | null>(null);
+  const quickReplaceLogoInputRef = useRef<HTMLInputElement>(null);
 
   // Success Story form state
   const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
@@ -318,49 +333,114 @@ export const AdminBackend: React.FC = () => {
     setStoryImageUrl('');
     setStoryPdfUrl('');
     setStoryPdfName('');
+    setStoryFormError(null);
     setUploadError(null);
   };
 
-  const handleAddSuccessStory = (e: React.FormEvent) => {
+  const handleAddSuccessStory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storyClientName || !storyTitle || !storyImageUrl) {
-      setUploadError('Please provide client name, title, and upload image URL.');
+    setStoryFormError(null);
+
+    const clientName = storyClientName.trim();
+    const title = storyTitle.trim();
+
+    if (!clientName) {
+      setStoryFormError('Please provide the Client / Enterprise Name.');
       return;
     }
+    if (!title) {
+      setStoryFormError('Please provide the Story Title.');
+      return;
+    }
+
+    // Default professional ISO banner image if none uploaded
+    const effectiveImageUrl = storyImageUrl.trim() || 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80';
+
     const resultsArray = storyResults
-      ? storyResults.split('\n').filter((r) => r.trim().length > 0)
+      ? storyResults.split('\n').map((r) => r.trim()).filter((r) => r.length > 0)
       : ['100% audit compliance achieved', 'Zero non-conformities found'];
 
-    if (editingStoryId) {
-      updateSuccessStory(editingStoryId, {
-        clientName: storyClientName,
-        title: storyTitle,
-        industry: storyIndustry || 'Enterprise',
-        challenge: storyChallenge || 'Rigorous multi-site compliance audit preparation.',
-        solution: storySolution || 'Deployed ISO Quality Centre automated control frameworks.',
-        results: resultsArray,
-        imageUrl: storyImageUrl,
-        standard: storyStandard || 'ISO 9001:2015',
-        pdfUrl: storyPdfUrl || undefined,
-        pdfName: storyPdfName || undefined,
-      });
-      showToast(`Success story for "${storyClientName}" updated in database!`);
-      handleCancelEditStory();
-    } else {
-      addSuccessStory({
-        clientName: storyClientName,
-        title: storyTitle,
-        industry: storyIndustry || 'Enterprise',
-        challenge: storyChallenge || 'Rigorous multi-site compliance audit preparation.',
-        solution: storySolution || 'Deployed ISO Quality Centre automated control frameworks.',
-        results: resultsArray,
-        imageUrl: storyImageUrl,
-        standard: storyStandard || 'ISO 9001:2015',
-        pdfUrl: storyPdfUrl || undefined,
-        pdfName: storyPdfName || undefined,
-      });
-      showToast('Success story published to database! View live preview on front end.');
-      handleCancelEditStory();
+    setIsSavingStory(true);
+    try {
+      if (editingStoryId) {
+        await updateSuccessStory(editingStoryId, {
+          clientName,
+          title,
+          industry: storyIndustry.trim() || 'Enterprise',
+          challenge: storyChallenge.trim() || 'Rigorous multi-site compliance audit preparation.',
+          solution: storySolution.trim() || 'Deployed ISO Quality Centre automated control frameworks.',
+          results: resultsArray,
+          imageUrl: effectiveImageUrl,
+          standard: storyStandard.trim() || 'ISO 9001:2015',
+          pdfUrl: storyPdfUrl.trim() || undefined,
+          pdfName: storyPdfName.trim() || undefined,
+        });
+        showToast(`Success story for "${clientName}" saved and updated in database!`);
+        handleCancelEditStory();
+      } else {
+        await addSuccessStory({
+          clientName,
+          title,
+          industry: storyIndustry.trim() || 'Enterprise',
+          challenge: storyChallenge.trim() || 'Rigorous multi-site compliance audit preparation.',
+          solution: storySolution.trim() || 'Deployed ISO Quality Centre automated control frameworks.',
+          results: resultsArray,
+          imageUrl: effectiveImageUrl,
+          standard: storyStandard.trim() || 'ISO 9001:2015',
+          pdfUrl: storyPdfUrl.trim() || undefined,
+          pdfName: storyPdfName.trim() || undefined,
+        });
+        showToast(`Success story for "${clientName}" published and saved to database!`);
+        handleCancelEditStory();
+      }
+    } catch (err: any) {
+      console.error('Error saving success story:', err);
+      setStoryFormError('Failed to save to database: ' + (err?.message || 'Check network connection'));
+    } finally {
+      setIsSavingStory(false);
+    }
+  };
+
+  const handleStartEditLogo = (client: any) => {
+    setEditingLogoId(client.id);
+    setNewLogoName(client.name);
+    setNewLogoIndustry(client.industry || '');
+    setNewLogoCaption(client.caption || '');
+    setNewLogoUrl(client.logoUrl);
+    setUploadError(null);
+  };
+
+  const handleCancelEditLogo = () => {
+    setEditingLogoId(null);
+    setNewLogoName('');
+    setNewLogoIndustry('');
+    setNewLogoCaption('');
+    setNewLogoUrl('');
+    setUploadError(null);
+  };
+
+  const handleQuickReplaceLogoImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !quickReplaceClientId) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('File size must be under 20MB.');
+      return;
+    }
+
+    const client = clientLogos.find((c) => c.id === quickReplaceClientId);
+    const targetName = client?.name || 'client';
+    showToast(`Uploading new logo image for ${targetName}...`);
+    try {
+      const publicUrl = await uploadClientLogoToStorage(file, targetName);
+      await updateClientLogo(quickReplaceClientId, { logoUrl: publicUrl });
+      showToast(`Updated logo image for "${targetName}"!`);
+    } catch (err: any) {
+      console.error('Failed to replace logo image:', err);
+      showToast('Upload error: failed to update image');
+    } finally {
+      setQuickReplaceClientId(null);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -373,7 +453,7 @@ export const AdminBackend: React.FC = () => {
 
     let resolvedLogoUrl = newLogoUrl;
     // If it's still base64 data, upload to Supabase first
-    if (resolvedLogoUrl.startsWith('data:image/')) {
+    if (resolvedLogoUrl.startsWith('data:')) {
       setIsUploading(true);
       setUploadingFileName('Uploading to Supabase Storage...');
       try {
@@ -386,13 +466,27 @@ export const AdminBackend: React.FC = () => {
       }
     }
 
-    addClientLogo({
+    if (editingLogoId) {
+      await updateClientLogo(editingLogoId, {
+        name: newLogoName,
+        industry: newLogoIndustry || 'Enterprise & Banking',
+        caption: newLogoCaption,
+        logoUrl: resolvedLogoUrl,
+      });
+      showToast(`Updated "${newLogoName}" logo & caption!`);
+      handleCancelEditLogo();
+      return;
+    }
+
+    await addClientLogo({
       name: newLogoName,
       industry: newLogoIndustry || 'Enterprise & Banking',
+      caption: newLogoCaption,
       logoUrl: resolvedLogoUrl,
     });
     setNewLogoName('');
     setNewLogoIndustry('');
+    setNewLogoCaption('');
     setNewLogoUrl('');
     setUploadError(null);
     showToast('Client logo saved and synchronized to cloud database!');
@@ -430,30 +524,38 @@ export const AdminBackend: React.FC = () => {
     showToast('Company details & Key statistics updated successfully!');
   };
 
-  // Handle local file selection and convert to Base64 for instant preview & persistence
-  const handleFileUpload = (
+  // Handle file selection and upload directly to real-time cloud storage
+  const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     target: 'gallery' | 'hero-video' | 'hero-image' | 'logo'
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit: warn if > 15MB for localStorage safety
-    if (file.size > 15 * 1024 * 1024) {
-      setUploadError('File exceeds 15MB. For large media, consider pasting an external CDN URL.');
+    // Check size limit: warn if > 25MB
+    if (file.size > 25 * 1024 * 1024) {
+      setUploadError('File exceeds 25MB. For large media, consider pasting an external CDN URL.');
       return;
     }
 
     setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
+    setUploadError(null);
+    showToast(`Uploading ${file.name} to Cloud Storage...`);
+
+    try {
+      const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|mov)$/i);
+      const bucket = isVideo ? 'site-data' : 'client-logos';
+      const cloudUrl = await uploadFileToSupabaseStorage({
+        fileOrDataUrl: file,
+        bucket,
+        prefix: target,
+      });
+
       setIsUploading(false);
-      if (!dataUrl) return;
 
       if (target === 'gallery') {
-        setNewMediaUrl(dataUrl);
-        if (file.type.startsWith('video/')) {
+        setNewMediaUrl(cloudUrl);
+        if (isVideo) {
           setNewMediaType('video');
           setNewMediaCategory('video');
         } else {
@@ -463,49 +565,36 @@ export const AdminBackend: React.FC = () => {
         if (!newMediaTitle) {
           setNewMediaTitle(file.name.replace(/\.[^/.]+$/, ''));
         }
-        showToast(`Loaded ${file.name} successfully!`);
+        showToast(`Uploaded ${file.name} to real-time Cloud Storage!`);
       } else if (target === 'hero-video') {
         setHeroDraft((prev) => ({
           ...prev,
-          videoUrl: dataUrl,
+          videoUrl: cloudUrl,
           bgMode: 'video',
         }));
-        showToast('Hero background video file uploaded!');
+        showToast('Hero background video uploaded to Cloud Storage!');
       } else if (target === 'hero-image') {
         setHeroDraft((prev) => ({
           ...prev,
-          infographicUrl: dataUrl,
+          infographicUrl: cloudUrl,
           bgMode: 'infographic',
         }));
-        showToast('Hero background infographic image uploaded!');
+        showToast('Hero background infographic image uploaded to Cloud Storage!');
       } else if (target === 'logo') {
-        uploadLogoToDatabase(dataUrl, file.name)
-          .then((savedUrl) => {
-            const updatedConfig = {
-              ...companyDraft,
-              logoUrl: savedUrl,
-              logoType: 'custom' as const,
-            };
-            setCompanyDraft(updatedConfig);
-            showToast('Logo uploaded and synchronized to database for all devices!');
-          })
-          .catch(() => {
-            const updatedConfig = {
-              ...companyDraft,
-              logoUrl: dataUrl,
-              logoType: 'custom' as const,
-            };
-            setCompanyDraft(updatedConfig);
-            updateCompanyConfig(updatedConfig);
-            showToast('Site logo uploaded and applied!');
-          });
+        const updatedConfig = {
+          ...companyDraft,
+          logoUrl: cloudUrl,
+          logoType: 'custom' as const,
+        };
+        setCompanyDraft(updatedConfig);
+        await updateCompanyConfig(updatedConfig);
+        showToast('Logo uploaded and synchronized to database for all devices!');
       }
-    };
-    reader.onerror = () => {
+    } catch (err: any) {
+      console.error('File upload error:', err);
       setIsUploading(false);
-      setUploadError('Failed to read file.');
-    };
-    reader.readAsDataURL(file);
+      setUploadError('Failed to upload file to cloud storage. Please check connection and try again.');
+    }
   };
 
   const handleCreateMedia = (e: React.FormEvent) => {
@@ -823,10 +912,17 @@ export const AdminBackend: React.FC = () => {
                 <div className="p-3 rounded-xl bg-slate-900/85 border border-slate-800 space-y-1.5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Database Status</span>
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Connected
-                    </span>
+                    {isSavingToDatabase ? (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                        Saving to DB...
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Connected
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] font-mono text-slate-300 truncate">
                     Supabase PostgreSQL
@@ -1082,6 +1178,33 @@ export const AdminBackend: React.FC = () => {
                         className="w-full px-3.5 py-2.5 rounded-xl border text-sm leading-relaxed bg-slate-900 border-slate-700 text-white"
                       />
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                          Primary Button Label
+                        </label>
+                        <input
+                          type="text"
+                          value={heroDraft.ctaPrimaryText || ''}
+                          onChange={(e) => setHeroDraft({ ...heroDraft, ctaPrimaryText: e.target.value })}
+                          placeholder="Explore Solutions"
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-sm bg-slate-900 border-slate-700 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                          Secondary Button Label
+                        </label>
+                        <input
+                          type="text"
+                          value={heroDraft.ctaSecondaryText || ''}
+                          onChange={(e) => setHeroDraft({ ...heroDraft, ctaSecondaryText: e.target.value })}
+                          placeholder="Talk to our expert"
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-sm bg-slate-900 border-slate-700 text-white"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1143,7 +1266,7 @@ export const AdminBackend: React.FC = () => {
                           Click to select a {newMediaType === 'video' ? 'Video' : 'Image'} file from your computer
                         </div>
                         <div className="text-[11px] text-slate-400">
-                          File will be processed and saved directly into browser local storage
+                          File will be uploaded and permanently synchronized across all devices in real-time Cloud Storage
                         </div>
                         <input
                           ref={fileInputRef}
@@ -1344,20 +1467,54 @@ export const AdminBackend: React.FC = () => {
                   ========================================================================= */}
               {activeTab === 'logos' && (
                 <div className="space-y-8">
+                  {/* Hidden file input for single-click quick logo image replacement */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={quickReplaceLogoInputRef}
+                    onChange={handleQuickReplaceLogoImage}
+                    className="hidden"
+                  />
+
                   <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
                     <div>
                       <h4 className="text-lg font-bold">Client Logo Carousel & Partner Brands</h4>
                       <p className="text-xs text-slate-400">
-                        Upload and manage certified client partner logos displayed in the marquee carousel below the hero section.
+                        Upload and manage certified client partner logos, captions, and branding displayed in the marquee carousel.
                       </p>
                     </div>
                   </div>
 
-                  {/* Add New Logo Form */}
-                  <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-5">
-                    <div className="flex items-center gap-2 text-sm font-bold text-[#00A9CF]">
-                      <Award className="w-5 h-5" />
-                      <span>Upload New Client Partner Logo</span>
+                  {/* Add / Edit Logo Form */}
+                  <div className={`p-6 rounded-2xl border transition-all space-y-5 ${
+                    editingLogoId
+                      ? 'border-amber-400/50 bg-amber-500/5 shadow-lg'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-bold">
+                        {editingLogoId ? (
+                          <>
+                            <Pencil className="w-5 h-5 text-amber-400" />
+                            <span className="text-amber-400">Edit Client Partner Logo & Caption</span>
+                          </>
+                        ) : (
+                          <>
+                            <Award className="w-5 h-5 text-[#00A9CF]" />
+                            <span className="text-[#00A9CF]">Upload New Client Partner Logo</span>
+                          </>
+                        )}
+                      </div>
+                      {editingLogoId && (
+                        <button
+                          type="button"
+                          onClick={handleCancelEditLogo}
+                          className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 transition-colors flex items-center gap-1.5"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Cancel Edit</span>
+                        </button>
+                      )}
                     </div>
 
                     <form onSubmit={handleAddClientLogo} className="space-y-4">
@@ -1391,6 +1548,19 @@ export const AdminBackend: React.FC = () => {
 
                       <div>
                         <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Caption / Certification Highlight (Displayed in Carousel Marquee)
+                        </label>
+                        <input
+                          type="text"
+                          value={newLogoCaption}
+                          onChange={(e) => setNewLogoCaption(e.target.value)}
+                          placeholder="e.g. ISO 27001 & ISO 9001 Enterprise Partner"
+                          className="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
                           Logo Image File (Upload from device or CDN URL) *
                         </label>
                         <div className="flex gap-3">
@@ -1407,7 +1577,7 @@ export const AdminBackend: React.FC = () => {
                             className="py-2.5 px-4 rounded-xl border border-dashed border-slate-700 hover:border-[#00A9CF] bg-slate-900/80 text-xs font-bold text-slate-300 flex items-center gap-2 transition-all"
                           >
                             <Upload className="w-4 h-4 text-[#00A9CF]" />
-                            <span>Browse File...</span>
+                            <span>Browse Image File...</span>
                           </button>
                           <input
                             type="url"
@@ -1421,7 +1591,7 @@ export const AdminBackend: React.FC = () => {
 
                       {newLogoUrl && (
                         <div className="flex items-center gap-4 p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-700 flex-shrink-0 p-1">
+                          <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-700 flex-shrink-0 p-1.5">
                             <img src={newLogoUrl} alt="Preview" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -1446,14 +1616,35 @@ export const AdminBackend: React.FC = () => {
                         </div>
                       )}
 
-                      <button
-                        type="submit"
-                        disabled={isUploading}
-                        className="py-3 px-6 rounded-xl font-bold text-xs text-slate-950 bg-[#00A9CF] hover:bg-[#0096C7] transition-all flex items-center gap-2 shadow-md active:scale-95 disabled:opacity-50"
-                      >
-                        <Plus className="w-4 h-4 text-slate-950" />
-                        <span>{isUploading ? 'Uploading to Supabase...' : 'Add to Client Logo Carousel'}</span>
-                      </button>
+                      <div className="flex items-center gap-3 pt-1">
+                        <button
+                          type="submit"
+                          disabled={isUploading}
+                          className={`py-3 px-6 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shadow-md active:scale-95 disabled:opacity-50 ${
+                            editingLogoId
+                              ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                              : 'bg-[#00A9CF] hover:bg-[#0096C7] text-slate-950'
+                          }`}
+                        >
+                          {editingLogoId ? <Save className="w-4 h-4 text-slate-950" /> : <Plus className="w-4 h-4 text-slate-950" />}
+                          <span>
+                            {isUploading
+                              ? 'Uploading to Supabase...'
+                              : editingLogoId
+                              ? 'Save Logo & Caption Changes'
+                              : 'Add to Client Logo Carousel'}
+                          </span>
+                        </button>
+                        {editingLogoId && (
+                          <button
+                            type="button"
+                            onClick={handleCancelEditLogo}
+                            className="py-3 px-4 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </form>
                   </div>
 
@@ -1495,25 +1686,44 @@ USING (bucket_id = 'client-logos');`}
 
                   {/* Existing Logos Grid */}
                   <div className="space-y-4">
-                    <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
-                      Active Client Logos in Carousel ({clientLogos.length})
-                    </h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+                        Active Client Logos in Carousel ({clientLogos.length})
+                      </h4>
+                      <span className="text-xs text-slate-400">
+                        Click pencil to edit or upload icon to replace image directly
+                      </span>
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {clientLogos.map((client) => (
                         <div
                           key={client.id}
-                          className="p-4 rounded-xl border border-slate-700 bg-slate-900 space-y-3"
+                          className={`p-4 rounded-xl border transition-colors space-y-3 ${
+                            editingLogoId === client.id
+                              ? 'border-amber-400/80 bg-amber-500/10 shadow-md'
+                              : 'border-slate-700 bg-slate-900'
+                          }`}
                         >
-                          <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-800 flex items-center justify-center border border-slate-600 flex-shrink-0 p-1">
+                              <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-800 flex items-center justify-center border border-slate-600 flex-shrink-0 p-1.5 shadow-inner">
                                 <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                               </div>
                               <div>
-                                <div className="text-xs font-bold text-white">{client.name}</div>
+                                <div className="text-xs font-bold text-white flex items-center gap-2">
+                                  <span>{client.name}</span>
+                                  {editingLogoId === client.id && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-400 text-slate-950">Editing</span>
+                                  )}
+                                </div>
+                                {client.caption && (
+                                  <div className="text-[11px] font-medium text-[#00A9CF] mt-0.5">
+                                    {client.caption}
+                                  </div>
+                                )}
                                 <div className="text-[10px] text-slate-300">{client.industry || 'Enterprise'}</div>
-                                <div className="mt-1">
+                                <div className="mt-1 flex items-center gap-2">
                                   {client.logoUrl.includes('supabase.co') ? (
                                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                       <span className="w-1 h-1 rounded-full bg-emerald-400"></span>
@@ -1528,24 +1738,51 @@ USING (bucket_id = 'client-logos');`}
                               </div>
                             </div>
 
-                            <button
-                              onClick={() => {
-                                if (confirm(`Remove "${client.name}" logo?`)) {
-                                  deleteClientLogo(client.id);
-                                  showToast('Client logo removed from database');
-                                }
-                              }}
-                              className="p-2 text-slate-300 hover:text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-                              title="Delete logo"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setQuickReplaceClientId(client.id);
+                                  quickReplaceLogoInputRef.current?.click();
+                                }}
+                                className="p-2 text-slate-300 hover:text-[#00A9CF] bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                                title="Upload new image for this logo"
+                              >
+                                <Upload className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditLogo(client)}
+                                className="p-2 text-slate-300 hover:text-amber-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                                title="Edit logo, caption & details"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`Remove "${client.name}" logo?`)) {
+                                    deleteClientLogo(client.id);
+                                    if (editingLogoId === client.id) handleCancelEditLogo();
+                                    showToast('Client logo removed from database');
+                                  }
+                                }}
+                                className="p-2 text-slate-300 hover:text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                                title="Delete logo"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
 
-                          <div className="pt-2 border-t border-slate-800">
-                            <span className="text-[10px] font-mono text-slate-400 block mb-0.5">Database Source URL:</span>
-                            <div className="text-[10px] font-mono text-sky-300 bg-slate-950 p-1.5 rounded border border-slate-800 truncate select-all">
-                              {client.logoUrl}
+                          <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-mono text-slate-400 block mb-0.5">Database Source URL:</span>
+                              <div className="text-[10px] font-mono text-sky-300 bg-slate-950 p-1.5 rounded border border-slate-800 truncate select-all">
+                                {client.logoUrl}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1767,24 +2004,47 @@ USING (bucket_id = 'client-logos');`}
                         />
                       </div>
 
+                      {storyFormError && (
+                        <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+                          <span>{storyFormError}</span>
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-3 pt-2">
                         <button
                           type="submit"
-                          className={`py-3 px-6 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shadow-md ${
+                          disabled={isSavingStory}
+                          className={`py-3 px-6 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                             editingStoryId
                               ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
                               : 'bg-[#00A9CF] hover:bg-[#0096C7] text-slate-950'
                           }`}
                         >
-                          {editingStoryId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                          <span>{editingStoryId ? 'Save & Update Success Story in Database' : 'Publish Success Story to Database'}</span>
+                          {isSavingStory ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                              <span>Saving to Database...</span>
+                            </>
+                          ) : editingStoryId ? (
+                            <>
+                              <Save className="w-4 h-4" />
+                              <span>Save & Update Success Story in Database</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              <span>Publish Success Story to Database</span>
+                            </>
+                          )}
                         </button>
 
                         {editingStoryId && (
                           <button
                             type="button"
                             onClick={handleCancelEditStory}
-                            className="py-3 px-5 rounded-xl font-bold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors"
+                            disabled={isSavingStory}
+                            className="py-3 px-5 rounded-xl font-bold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors disabled:opacity-50"
                           >
                             Cancel
                           </button>
@@ -1857,9 +2117,9 @@ USING (bucket_id = 'client-logos');`}
                               </button>
 
                               <button
-                                onClick={() => {
+                                onClick={async () => {
                                   if (confirm(`Delete success story for "${story.clientName}"?`)) {
-                                    deleteSuccessStory(story.id);
+                                    await deleteSuccessStory(story.id);
                                     showToast('Success story removed from database');
                                   }
                                 }}
