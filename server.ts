@@ -29,7 +29,9 @@ async function syncDatabaseFromSupabase(force = false) {
       headers['Authorization'] = `Bearer ${SUPABASE_KEY}`;
       headers['apikey'] = SUPABASE_KEY;
     }
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
+    const cacheBusterUrl = `${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json?t=${Date.now()}&_b=${Math.random().toString(36).slice(2)}`;
+    const res = await fetch(cacheBusterUrl, {
+      cache: 'no-store',
       headers,
     });
     if (res.ok) {
@@ -184,7 +186,7 @@ function readDatabase() {
 // Helper to write database
 async function writeDatabase(data: any) {
   try {
-    data.lastUpdated = data.lastUpdated || Date.now();
+    data.lastUpdated = Date.now();
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
     // Synchronously push update to live Supabase cloud storage (site-data bucket)
     await syncDatabaseToSupabase(data);
@@ -231,7 +233,7 @@ app.get('/api/cms', async (req: Request, res: Response) => {
       headers['Authorization'] = `Bearer ${SUPABASE_KEY}`;
       headers['apikey'] = SUPABASE_KEY;
     }
-    const cloudRes = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json`, {
+    const cloudRes = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json?t=${Date.now()}&_b=${Math.random().toString(36).slice(2)}`, {
       cache: 'no-store',
       headers,
     });

@@ -935,8 +935,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const tempId = `logo-${Date.now()}`;
     let finalUrl = logo.logoUrl;
 
-    // If image is a local data URL, upload directly to Supabase cloud storage first
-    if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:')) {
+    // Convert any local data/blob URLs to permanent Supabase Storage CDN URLs
+    if (finalUrl && typeof finalUrl === 'string' && (finalUrl.startsWith('data:') || finalUrl.startsWith('blob:') || finalUrl.startsWith('/uploads/'))) {
       try {
         finalUrl = await uploadClientLogoToLiveStorage(finalUrl, logo.name);
       } catch (err) {
@@ -963,8 +963,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateClientLogo = async (id: string, updates: Partial<ClientLogoItem>): Promise<boolean> => {
     let finalUrl = updates.logoUrl;
 
-    // If image is a local data URL, upload directly to Supabase cloud storage first
-    if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:')) {
+    // Convert any local data/blob URLs to permanent Supabase Storage CDN URLs
+    if (finalUrl && typeof finalUrl === 'string' && (finalUrl.startsWith('data:') || finalUrl.startsWith('blob:') || finalUrl.startsWith('/uploads/'))) {
       try {
         finalUrl = await uploadClientLogoToLiveStorage(finalUrl, updates.name || 'client');
       } catch (err) {
@@ -997,8 +997,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let finalUrl = story.imageUrl;
     let finalPdfUrl = story.pdfUrl;
 
-    // Convert any base64 data URLs to permanent Supabase Storage URLs first
-    if (finalUrl && typeof finalUrl === 'string' && finalUrl.startsWith('data:image/')) {
+    // Convert any local data/blob URLs to permanent Supabase Storage CDN URLs
+    if (finalUrl && typeof finalUrl === 'string' && (finalUrl.startsWith('data:') || finalUrl.startsWith('blob:') || finalUrl.startsWith('/uploads/'))) {
       try {
         finalUrl = await uploadStoryImageToLiveStorage(finalUrl, story.clientName);
       } catch (err) {
@@ -1006,7 +1006,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    if (finalPdfUrl && typeof finalPdfUrl === 'string' && finalPdfUrl.startsWith('data:')) {
+    if (finalPdfUrl && typeof finalPdfUrl === 'string' && (finalPdfUrl.startsWith('data:') || finalPdfUrl.startsWith('blob:') || finalPdfUrl.startsWith('/uploads/'))) {
       try {
         finalPdfUrl = await uploadPdfToLiveStorage(finalPdfUrl, story.clientName);
       } catch (e) {
@@ -1037,8 +1037,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let finalImageUrl = updates.imageUrl;
     let finalPdfUrl = updates.pdfUrl;
 
-    // Convert any base64 data URLs to permanent Supabase Storage URLs first
-    if (finalImageUrl && typeof finalImageUrl === 'string' && finalImageUrl.startsWith('data:image/')) {
+    // Convert any local data/blob URLs to permanent Supabase Storage CDN URLs
+    if (finalImageUrl && typeof finalImageUrl === 'string' && (finalImageUrl.startsWith('data:') || finalImageUrl.startsWith('blob:') || finalImageUrl.startsWith('/uploads/'))) {
       try {
         finalImageUrl = await uploadStoryImageToLiveStorage(finalImageUrl, updates.clientName);
       } catch (e) {
@@ -1046,7 +1046,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    if (finalPdfUrl && typeof finalPdfUrl === 'string' && finalPdfUrl.startsWith('data:')) {
+    if (finalPdfUrl && typeof finalPdfUrl === 'string' && (finalPdfUrl.startsWith('data:') || finalPdfUrl.startsWith('blob:') || finalPdfUrl.startsWith('/uploads/'))) {
       try {
         finalPdfUrl = await uploadPdfToLiveStorage(finalPdfUrl, updates.clientName);
       } catch (e) {

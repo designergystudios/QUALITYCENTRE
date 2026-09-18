@@ -26,23 +26,38 @@ export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
  * Fetch latest CMS configuration directly from live Supabase database
  */
 export async function fetchLiveDatabase() {
-  // 1. Direct authenticated download from Supabase Storage origin (bypasses Cloudflare public CDN cache completely)
+  const cacheBusterUrl = `${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json?t=${Date.now()}&_b=${Math.random().toString(36).slice(2)}`;
+
+  // 1. Direct cache-bypassing authenticated HTTP fetch from Supabase Storage origin
   try {
-    const { data, error } = await supabaseAdmin.storage.from('site-data').download('cms-database.json');
-    if (!error && data) {
-      const text = await data.text();
-      const parsed = JSON.parse(text);
+    const headers: Record<string, string> = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    };
+    if (SUPABASE_SERVICE_KEY) {
+      headers['Authorization'] = `Bearer ${SUPABASE_SERVICE_KEY}`;
+      headers['apikey'] = SUPABASE_SERVICE_KEY;
+    }
+
+    const res = await fetch(cacheBusterUrl, {
+      cache: 'no-store',
+      headers,
+    });
+
+    if (res.ok) {
+      const parsed = await res.json();
       if (parsed && (parsed.clientLogos || parsed.companyConfig || parsed.heroConfig || parsed.successStories)) {
         return parsed;
       }
     }
   } catch (adminErr) {
-    // Fallback to direct HTTP fetch
+    console.warn('Direct Supabase live DB fetch notice:', adminErr);
   }
 
-  // 2. Secondary direct HTTP fetch with aggressive cache-busting
+  // 2. Secondary public URL fetch with aggressive cache-busting
   try {
-    const res = await fetch(`${LIVE_SUPABASE_DB_URL}?t=${Date.now()}&_bust=${Math.random().toString(36).slice(2)}`, {
+    const publicUrl = `${LIVE_SUPABASE_DB_URL}?t=${Date.now()}&_b=${Math.random().toString(36).slice(2)}`;
+    const res = await fetch(publicUrl, {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -51,10 +66,12 @@ export async function fetchLiveDatabase() {
     });
     if (res.ok) {
       const data = await res.json();
-      return data;
+      if (data && (data.clientLogos || data.companyConfig || data.heroConfig || data.successStories)) {
+        return data;
+      }
     }
   } catch (err) {
-    console.warn('Live Supabase database fetch notice:', err);
+    console.warn('Live Supabase database fallback fetch notice:', err);
   }
   return null;
 }
@@ -66,7 +83,7 @@ export async function saveLiveDatabaseToSupabase(dbData: any): Promise<boolean> 
   try {
     const payload = {
       ...dbData,
-      lastUpdated: dbData?.lastUpdated || Date.now(),
+      lastUpdated: Date.now(),
     };
     const jsonString = JSON.stringify(payload, null, 2);
 
@@ -74,6 +91,7 @@ export async function saveLiveDatabaseToSupabase(dbData: any): Promise<boolean> 
     try {
       const { error } = await supabaseAdmin.storage.from('site-data').upload('cms-database.json', jsonString, {
         upsert: true,
+        cacheControl: '0',
         contentType: 'application/json',
       });
       if (!error) {
@@ -119,7 +137,7 @@ export async function saveLiveDatabaseToSupabase(dbData: any): Promise<boolean> 
 }
 
 /**
- * Generic helper to upload any File or base64 dataUrl to Supabase Storage
+ * Generic helper to upload any File or base64 dataUrl or blob URL to Supabase Storage
  */
 export async function uploadFileToSupabaseStorage({
   fileOrDataUrl,
@@ -132,9 +150,12 @@ export async function uploadFileToSupabaseStorage({
   filename?: string;
   prefix?: string;
 }): Promise<string> {
-  // If already a remote HTTP/HTTPS URL, return directly
+  // If already a permanent remote HTTP/HTTPS URL on Supabase, return directly
   if (typeof fileOrDataUrl === 'string') {
-    if (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://')) {
+    if ((fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://')) && fileOrDataUrl.includes('supabase.co')) {
+      return fileOrDataUrl;
+    }
+    if (fileOrDataUrl.startsWith('https://images.unsplash.com') || fileOrDataUrl.startsWith('https://cdn.')) {
       return fileOrDataUrl;
     }
   }
@@ -167,6 +188,15 @@ export async function uploadFileToSupabaseStorage({
         } else {
           return fileOrDataUrl;
         }
+      } else if (fileOrDataUrl.startsWith('blob:')) {
+        const blobRes = await fetch(fileOrDataUrl);
+        buffer = await blobRes.blob();
+        mimeType = buffer.type || 'image/jpeg';
+        if (mimeType.includes('png')) fileExt = 'png';
+        else if (mimeType.includes('svg')) fileExt = 'svg';
+        else if (mimeType.includes('webp')) fileExt = 'webp';
+      } else if (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://')) {
+        return fileOrDataUrl;
       } else {
         return fileOrDataUrl;
       }
