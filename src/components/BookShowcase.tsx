@@ -65,25 +65,15 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${
-              isDark
-                ? 'bg-amber-500/10 border-amber-500/25 text-amber-400'
-                : 'bg-amber-50 border-amber-300 text-amber-800'
-            }`}
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>THOUGHT LEADERSHIP & FOUNDER SPOTLIGHT</span>
-          </div>
+        <div className="text-center max-w-4xl mx-auto space-y-4">
           <h2
             className={`text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight transition-colors ${
               isDark ? 'text-white' : 'text-slate-900'
             }`}
           >
-            The Definitive Playbook for{' '}
+            A Concise Guide to Quality Management{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-yellow-400 to-cyan-500">
-              African Global Competitiveness
+              Based on ISO 9001
             </span>
           </h2>
           <p
@@ -91,8 +81,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
               isDark ? 'text-slate-300' : 'text-slate-600'
             }`}
           >
-            Authored by Julius N., Founder of Quality Centre Limited, sharing 26+ years of
-            battle-tested strategies for conquering international markets through ISO standards.
+            Authored and published by Julius Njatha Muraguri, Management Systems Assessor, Lead Auditor & Founder, Quality Centre Limited.
           </p>
         </div>
 
@@ -197,7 +186,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
                       isDark ? 'text-white' : 'text-slate-900'
                     }`}
                   >
-                    "{book.title}: {book.subtitle}"
+                    "{book.title}"
                   </h3>
                   <div
                     className={`text-xs sm:text-sm font-medium ${
@@ -255,7 +244,7 @@ export const BookShowcase: React.FC<BookShowcaseProps> = ({
                 <div className="pt-2 space-y-3">
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <button
-                      onClick={() => onOpenConsultation('Inquire: Order "ISO 9000 Secret"')}
+                      onClick={() => onOpenConsultation('Inquire: Order "A Concise Guide to Quality Management Based on ISO 9001"')}
                       className="px-6 py-3.5 rounded-xl font-bold text-xs sm:text-sm text-slate-900 bg-gradient-to-r from-amber-400 via-yellow-300 to-cyan-400 hover:opacity-95 transition-all shadow-lg flex items-center justify-center gap-2"
                     >
                       <BookOpen className="w-4 h-4 text-slate-900" />

@@ -90,9 +90,9 @@ export const Blog: React.FC<BlogProps> = ({ onOpenConsultation }) => {
               isDark ? 'text-white' : 'text-slate-900'
             }`}
           >
-            Management Systems & ISO{' '}
+            ISO management systems &{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A9CF] via-cyan-400 to-amber-400">
-              Thought Leadership
+              thought leadership
             </span>
           </h2>
           
@@ -101,7 +101,7 @@ export const Blog: React.FC<BlogProps> = ({ onOpenConsultation }) => {
               isDark ? 'text-slate-300' : 'text-slate-600'
             }`}
           >
-            Expert breakdowns, implementation guides, ISO standard updates, and digital GRC insights curated by Quality Centre’s lead auditors and advisory team.
+            Expert insights, implementation guides, and the latest ISO standard updates from Quality Centre’s experts and associates.
           </p>
         </div>
 

@@ -2259,7 +2259,7 @@ USING (bucket_id = 'client-logos');`}
                                 QUALITY CENTRE PRESS
                               </div>
                               <div className="text-lg font-black text-white font-serif leading-tight">
-                                {bookDraft.title || 'ISO 9000 SECRET'}
+                                {bookDraft.title || 'A Concise Guide to Quality Management Based on ISO 9001'}
                               </div>
                               <div className="text-[10px] text-cyan-300 font-semibold uppercase">
                                 {bookDraft.subtitle || 'Unlocking World Markets'}

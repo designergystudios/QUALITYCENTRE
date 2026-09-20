@@ -64,9 +64,9 @@ export const Approach: React.FC<ApproachProps> = ({ onOpenConsultation }) => {
               isDark ? 'text-white' : 'text-slate-900'
             }`}
           >
-            Our Systematic Path to{' '}
+            Our Path to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-sky-500 to-amber-500">
-              Audit-Ready Excellence
+              Business Excellence
             </span>
           </h2>
           <p

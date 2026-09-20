@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { AfroPattern } from './AfroPattern';
-import { SERVICE_PILLARS, ISO_STANDARDS } from '../data/content';
+import { SERVICE_PILLARS, ISO_STANDARDS, SIX_BUSINESS_SERVICES } from '../data/content';
 import { IsoStandard, ServicePillar } from '../types';
 
 interface ServicesProps {
@@ -163,7 +163,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenConsultation }) => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
+        <div className="text-center max-w-4xl mx-auto space-y-4">
           <div
             className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${
               isDark
@@ -179,87 +179,133 @@ export const Services: React.FC<ServicesProps> = ({ onOpenConsultation }) => {
               isDark ? 'text-white' : 'text-slate-900'
             }`}
           >
-            Three Core Pillars of{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-sky-500 to-amber-500">
-              Operational Excellence
-            </span>
+            Six Lines of Business Excellence
           </h2>
           <p
-            className={`text-base sm:text-lg leading-relaxed transition-colors ${
+            className={`text-base sm:text-lg md:text-xl font-medium leading-relaxed transition-colors ${
               isDark ? 'text-slate-300' : 'text-slate-600'
             }`}
           >
-            Eliminating audit anxiety and transforming compliance into high-velocity digital operating systems.
+            Transform your management systems (MS) into highly enabled digital business systems.
           </p>
         </div>
 
-        {/* Pillar Switcher Navigation */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {SERVICE_PILLARS.map((pillar) => {
-            const isActive = activePillarId === pillar.id;
-            return (
-              <button
-                key={pillar.id}
-                onClick={() => setActivePillarId(pillar.id)}
-                className={`relative text-left p-5 sm:p-6 rounded-2xl transition-all duration-300 border ${
-                  isActive
-                    ? isDark
-                      ? 'bg-slate-900/95 border-cyan-500 shadow-[0_10px_35px_rgba(0,180,216,0.2)]'
-                      : 'bg-white border-cyan-500 shadow-lg shadow-cyan-100'
-                    : isDark
-                    ? 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
-                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
+        {/* Six Lines of Business Excellence Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          {SIX_BUSINESS_SERVICES.map((srv) => (
+            <div
+              key={srv.id}
+              className={`relative flex flex-col justify-between p-6 sm:p-7 rounded-2xl border transition-all duration-300 group hover:-translate-y-1 ${
+                isDark
+                  ? 'bg-slate-900/90 border-slate-800 hover:border-cyan-500/60 shadow-xl hover:shadow-[0_15px_40px_rgba(0,180,216,0.15)]'
+                  : 'bg-white border-slate-200/80 hover:border-cyan-500/60 shadow-sm hover:shadow-xl'
+              }`}
+            >
+              <div className="space-y-4">
+                {/* Card Header: Number + Icon + Badge */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        isActive
-                          ? 'bg-cyan-500 text-slate-950 shadow-md'
-                          : isDark
-                          ? 'bg-slate-800 text-slate-400'
-                          : 'bg-slate-100 text-slate-600'
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm border ${
+                        isDark
+                          ? 'bg-slate-800 border-cyan-500/30 text-cyan-400'
+                          : 'bg-cyan-50 border-cyan-200 text-cyan-800'
                       }`}
                     >
-                      {pillar.id === 'iso-transformation' && <Layers className="w-5 h-5" />}
-                      {pillar.id === 'sustainability-esg' && <Sprout className="w-5 h-5" />}
-                      {pillar.id === 'grc-transformation' && <Network className="w-5 h-5" />}
+                      {srv.number}
                     </div>
                     <span
-                      className={`text-[11px] font-mono font-bold uppercase ${
-                        isDark ? 'text-amber-400' : 'text-amber-600'
+                      className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                        isDark
+                          ? 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+                          : 'bg-amber-50 border-amber-200 text-amber-700'
                       }`}
                     >
-                      {pillar.badge}
+                      {srv.badge}
                     </span>
                   </div>
-                  {isActive && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse" />
-                  )}
+                  <div
+                    className={`p-2 rounded-xl transition-colors ${
+                      isDark ? 'bg-slate-800/80' : 'bg-slate-100'
+                    }`}
+                  >
+                    {srv.icon === 'ShieldCheck' && <ShieldCheck className="w-5 h-5 text-cyan-400" />}
+                    {srv.icon === 'Layers' && <Layers className="w-5 h-5 text-sky-400" />}
+                    {srv.icon === 'TrendingUp' && <TrendingUp className="w-5 h-5 text-amber-400" />}
+                    {srv.icon === 'Sprout' && <Sprout className="w-5 h-5 text-emerald-400" />}
+                    {srv.icon === 'Network' && <Network className="w-5 h-5 text-indigo-400" />}
+                    {srv.icon === 'Award' && <Award className="w-5 h-5 text-[#00A9CF]" />}
+                  </div>
                 </div>
 
-                <h3
-                  className={`text-lg font-bold mb-2 leading-snug transition-colors ${
-                    isDark ? 'text-white' : 'text-slate-900'
-                  }`}
-                >
-                  {pillar.title}
-                </h3>
+                {/* Service Title & Tagline */}
+                <div className="space-y-2">
+                  <h3
+                    className={`text-xl font-black leading-snug group-hover:text-cyan-400 transition-colors ${
+                      isDark ? 'text-white' : 'text-slate-900'
+                    }`}
+                  >
+                    {srv.number}. {srv.title}
+                  </h3>
+                  <p
+                    className={`text-xs font-medium leading-relaxed ${
+                      isDark ? 'text-slate-300' : 'text-slate-600'
+                    }`}
+                  >
+                    {srv.tagline}
+                  </p>
+                </div>
+
+                {/* Description */}
                 <p
-                  className={`text-xs line-clamp-2 transition-colors ${
-                    isDark ? 'text-slate-400' : 'text-slate-600'
+                  className={`text-xs leading-relaxed transition-colors border-t pt-3 ${
+                    isDark ? 'text-slate-400 border-slate-800' : 'text-slate-500 border-slate-100'
                   }`}
                 >
-                  {pillar.tagline}
+                  {srv.description}
                 </p>
 
-                {isActive && (
-                  <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-gradient-to-r from-cyan-500 via-sky-500 to-amber-500" />
-                )}
-              </button>
-            );
-          })}
+                {/* Key Features List */}
+                <div className="space-y-2 pt-1">
+                  <div
+                    className={`text-[11px] font-mono font-bold uppercase tracking-wider ${
+                      isDark ? 'text-slate-400' : 'text-slate-500'
+                    }`}
+                  >
+                    Core Deliverables:
+                  </div>
+                  <ul className="space-y-2">
+                    {srv.features.map((feat, idx) => (
+                      <li
+                        key={idx}
+                        className={`flex items-start gap-2 text-xs transition-colors ${
+                          isDark ? 'text-slate-300' : 'text-slate-700'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Action CTA */}
+              <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  onClick={() => onOpenConsultation(`${srv.number}. ${srv.title}`)}
+                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                    isDark
+                      ? 'bg-slate-800 hover:bg-cyan-500 text-slate-200 hover:text-slate-950 border border-slate-700 hover:border-cyan-400'
+                      : 'bg-slate-100 hover:bg-cyan-500 text-slate-800 hover:text-white border border-slate-200'
+                  }`}
+                >
+                  <span>Request Consultation</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Active Pillar Detailed Workspace */}

@@ -173,17 +173,31 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                           : 'bg-slate-50 border-slate-300 text-slate-900'
                       }`}
                     >
-                      <option value="ISO 9001 (Quality Management)">ISO 9001 (Quality Management)</option>
-                      <option value="ISO/IEC 27001 (Information Security)">ISO/IEC 27001 (Cyber & Data Security)</option>
-                      <option value="ISO 14001 (Environmental Management)">ISO 14001 (Environmental / NEMA)</option>
-                      <option value="ISO 45001 (Occupational Health & Safety)">ISO 45001 (Health & Safety / OSHA)</option>
-                      <option value="ISO 22000 (Food Safety Management)">ISO 22000 (Food Safety / HACCP)</option>
-                      <option value="ISO 21001 (Educational Management)">ISO 21001 (Educational Orgs)</option>
-                      <option value="ISO 26000 & ESG Sustainability">ISO 26000 & Digital ESG</option>
-                      <option value="Unified GRC Architecture">Unified Enterprise GRC</option>
-                      <option value="PECB Training & Professional Certification">PECB Training & Professional Certification</option>
-                      <option value="SoftExpert Enterprise Software Implementation">SoftExpert Enterprise Software</option>
-                      <option value="General ISO Consultation & Gap Analysis">General ISO Diagnostic</option>
+                      <optgroup label="Our Path to Business Excellence">
+                        <option value="Gap Analysis">Gap Analysis</option>
+                        <option value="Training">Training</option>
+                        <option value="Digitally Transform">Digitally Transform</option>
+                        <option value="Continual Improvement">Continual Improvement</option>
+                      </optgroup>
+                      <optgroup label="Six Lines of Business Excellence">
+                        <option value="1. QMS & Other MS Implementation">1. QMS & Other MS Implementation</option>
+                        <option value="2. QMS & Other MS Digital Transformation">2. QMS & Other MS Digital Transformation</option>
+                        <option value="3. Digital Risk Transformation">3. Digital Risk Transformation</option>
+                        <option value="4. Digital ESG Transformation">4. Digital ESG Transformation</option>
+                        <option value="5. Digital GRC Transformation">5. Digital GRC Transformation</option>
+                        <option value="6. MS Maintenance">6. MS Maintenance</option>
+                      </optgroup>
+                      <optgroup label="Specific ISO Standards & Frameworks">
+                        <option value="ISO 9001 (Quality Management)">ISO 9001 (Quality Management)</option>
+                        <option value="ISO/IEC 27001 (Information Security)">ISO/IEC 27001 (Cyber & Data Security)</option>
+                        <option value="ISO 14001 (Environmental Management)">ISO 14001 (Environmental / NEMA)</option>
+                        <option value="ISO 45001 (Occupational Health & Safety)">ISO 45001 (Health & Safety / OSHA)</option>
+                        <option value="ISO 22000 (Food Safety Management)">ISO 22000 (Food Safety / HACCP)</option>
+                        <option value="ISO 21001 (Educational Management)">ISO 21001 (Educational Orgs)</option>
+                        <option value="PECB Training & Professional Certification">PECB Training & Professional Certification</option>
+                        <option value="SoftExpert Enterprise Software Implementation">SoftExpert Enterprise Software</option>
+                        <option value="General ISO Consultation & Gap Analysis">General ISO Diagnostic</option>
+                      </optgroup>
                     </select>
                   </div>
 

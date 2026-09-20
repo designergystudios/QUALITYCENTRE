@@ -65,9 +65,7 @@ export const Footer: React.FC<FooterProps> = ({
               {COMPANY_DETAILS.tagline}
             </p>
             <p className={`text-[11px] leading-relaxed max-w-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Quality Centre Limited is East Africa’s leading management systems performance,
-              digital transformation, and sustainability consultancy. Official SoftExpert Partner & PECB
-              Authorized Partner.
+              {COMPANY_DETAILS.subheadline}
             </p>
 
             {/* Nairobi Headquarters Coordinates */}
@@ -87,7 +85,7 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
           </div>
 
-          {/* Col 3: Core ISO Standards */}
+          {/* Col 3: Core Management Standards */}
           <div className="space-y-3">
             <div
               className={`text-xs font-mono font-bold uppercase tracking-wider ${
@@ -102,7 +100,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  ISO 9001:2015 (QMS)
+                  ISO 9001 - QMS
                 </button>
               </li>
               <li>
@@ -110,7 +108,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  ISO/IEC 27001:2022 (ISMS)
+                  ISO/IEC 27001 - ISMS
                 </button>
               </li>
               <li>
@@ -118,7 +116,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  ISO 14001:2015 (EMS & NEMA)
+                  ISO 14001 - EMS
                 </button>
               </li>
               <li>
@@ -126,7 +124,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  ISO 45001:2018 (Health & Safety)
+                  ISO 45001 - OHMS
                 </button>
               </li>
               <li>
@@ -134,7 +132,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  ISO 22000:2018 (Food Safety)
+                  ISO 22000 - FSMS
                 </button>
               </li>
               <li>
@@ -142,7 +140,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  ISO 21001 (Education Systems)
+                  ISO 21001 - EOMS
                 </button>
               </li>
               <li>
@@ -150,20 +148,20 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  ISO 26000 & ESG Reporting
+                  ISO 26000 - SR
                 </button>
               </li>
             </ul>
           </div>
 
-          {/* Col 4: Solutions & Tech Stack */}
+          {/* Col 4: Services & Products */}
           <div className="space-y-3">
             <div
               className={`text-xs font-mono font-bold uppercase tracking-wider ${
                 isDark ? 'text-white' : 'text-slate-900'
               }`}
             >
-              Solutions & Software
+              Services & Products
             </div>
             <ul className={`space-y-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               <li>
@@ -171,7 +169,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  Digital Management Systems
+                  1. QMS & Other MS Implementation
                 </button>
               </li>
               <li>
@@ -179,7 +177,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  Sustainability & Digital ESG
+                  2. QMS & Other MS Digital Transformation
                 </button>
               </li>
               <li>
@@ -187,45 +185,31 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  Unified GRC Transformation
+                  3. Digital Risk Transformation
                 </button>
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('#about')}
+                  onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  SoftExpert EQM / GRC Suite
+                  4. Digital ESG Transformation
                 </button>
               </li>
               <li>
-                <a
-                  href="https://pecb.com/en/newsReleases/pecb-signs-a-partnership-agreement-with-quality-centre-ltd"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-amber-400 transition-colors text-left flex items-center gap-1.5"
+                <button
+                  onClick={() => onNavigate('#services')}
+                  className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  <span>PECB Partnership Agreement</span>
-                  <ExternalLink className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://pecb.com/en"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-amber-400 transition-colors text-left flex items-center gap-1.5"
-                >
-                  <span>PECB Global (pecb.com)</span>
-                  <ExternalLink className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                </a>
+                  5. Digital GRC Transformation
+                </button>
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('#approach')}
+                  onClick={() => onNavigate('#services')}
                   className="hover:text-cyan-500 transition-colors text-left"
                 >
-                  4-Stage Transformation Blueprint
+                  6. MS Maintenance
                 </button>
               </li>
             </ul>

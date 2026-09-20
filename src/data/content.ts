@@ -10,16 +10,16 @@ import {
 export const COMPANY_DETAILS = {
   name: 'Quality Centre Limited',
   shortName: 'Quality Centre',
-  legalName: 'Quality Centre Limited (Kenya)',
+  legalName: 'Quality Centre Limited',
   tagline: 'Empowering success by making business processes run faster, easier, and better.',
   subheadline:
-    'Quality Centre transforms ISO, risk, GRC, and ESG/sustainability requirements into high-performing, digitally-enabled operating systems across Africa & beyond.',
+    'Quality Centre Limited is an independent management systems, digital transformation, and GRC consulting firm. We transform ISO, risk, GRC, and ESG/sustainability requirements into high-performing, digitally-enabled operating systems across Africa & beyond.',
   founded: '1998',
   experienceYears: '26+',
   headquarters: 'Nairobi, Kenya',
   address: 'Eden Square Business Centre, 5th Floor, Chiromo Road, Westlands, Nairobi, Kenya',
-  phone: '+254 (0) 20 386 1120 / +254 722 000 000',
-  email: 'info@qualitycentre.co.ke',
+  phone: '+254 786 614 600',
+  email: 'info@qualitycentregroup.com',
   hours: 'Mon - Fri: 8:00 AM - 5:00 PM EAT',
   social: {
     companyLinkedIn: 'https://www.linkedin.com/company/quality-centreke/',
@@ -37,8 +37,8 @@ export const COMPANY_DETAILS = {
 
 export const ISO_STANDARDS: IsoStandard[] = [
   {
-    code: 'ISO 9001',
-    name: 'Quality Management Systems (QMS)',
+    code: 'ISO 9001 - QMS',
+    name: 'Quality Management Systems',
     category: 'Quality',
     description: 'The global benchmark for customer satisfaction, operational consistency, and continuous process optimization.',
     keyClauses: [
@@ -58,8 +58,8 @@ export const ISO_STANDARDS: IsoStandard[] = [
     color: '#00B4D8',
   },
   {
-    code: 'ISO/IEC 27001',
-    name: 'Information Security, Cybersecurity & Privacy Protection',
+    code: 'ISO/IEC 27001 - ISMS',
+    name: 'Information Security Management Systems',
     category: 'Security',
     description: 'Systematic protection of corporate intellectual property, cloud assets, sensitive customer data, and financial records.',
     keyClauses: [
@@ -78,8 +78,8 @@ export const ISO_STANDARDS: IsoStandard[] = [
     color: '#38BDF8',
   },
   {
-    code: 'ISO 14001',
-    name: 'Environmental Management Systems (EMS)',
+    code: 'ISO 14001 - EMS',
+    name: 'Environmental Management Systems',
     category: 'Environment',
     description: 'Framework to minimize ecological footprint, ensure regulatory compliance with NEMA, and drive resource efficiency.',
     keyClauses: [
@@ -98,8 +98,8 @@ export const ISO_STANDARDS: IsoStandard[] = [
     color: '#10B981',
   },
   {
-    code: 'ISO 45001',
-    name: 'Occupational Health and Safety (OH&S)',
+    code: 'ISO 45001 - OHMS',
+    name: 'Occupational Health and Safety Management Systems',
     category: 'Security',
     description: 'Proactive protection of workplace personnel, eliminating hazards, preventing injuries, and fostering workplace well-being.',
     keyClauses: [
@@ -118,8 +118,8 @@ export const ISO_STANDARDS: IsoStandard[] = [
     color: '#F59E0B',
   },
   {
-    code: 'ISO 22000 / 22001',
-    name: 'Food Safety Management Systems (FSMS)',
+    code: 'ISO 22000 - FSMS',
+    name: 'Food Safety Management Systems',
     category: 'Sector-Specific',
     description: 'Farm-to-fork integrity ensuring food safety hazards are controlled across agriculture, manufacturing, packaging, and logistics.',
     keyClauses: [
@@ -138,10 +138,10 @@ export const ISO_STANDARDS: IsoStandard[] = [
     color: '#EC4899',
   },
   {
-    code: 'ISO 21001',
-    name: 'Educational Organizations Management Systems (EOMS)',
+    code: 'ISO 21001 - EOMS',
+    name: 'Educational Organizations Management Systems',
     category: 'Sector-Specific',
-    description: 'Tailored for Kenyan universities, colleges, and training institutes to elevate learner satisfaction and institutional governance.',
+    description: 'Tailored for universities, colleges, and training institutes to elevate learner satisfaction and institutional governance.',
     keyClauses: [
       'Curriculum Design, Delivery & Competency Frameworks',
       'Special Educational Needs & Inclusivity Monitoring',
@@ -158,7 +158,7 @@ export const ISO_STANDARDS: IsoStandard[] = [
     color: '#8B5CF6',
   },
   {
-    code: 'ISO 26000',
+    code: 'ISO 26000 - SR',
     name: 'Social Responsibility Guidance & ESG Governance',
     category: 'ESG',
     description: 'Transforming societal commitments into verifiable actions covering human rights, fair operating practices, and community development.',
@@ -177,6 +177,124 @@ export const ISO_STANDARDS: IsoStandard[] = [
     iconName: 'Globe',
     color: '#06B6D4',
   },
+];
+
+export interface BusinessExcellenceService {
+  id: string;
+  number: string;
+  title: string;
+  tagline: string;
+  badge: string;
+  description: string;
+  icon: string;
+  features: string[];
+  deliverables: string[];
+  businessValue: string[];
+}
+
+export const SIX_BUSINESS_SERVICES: BusinessExcellenceService[] = [
+  {
+    id: 'qms-implementation',
+    number: '01',
+    title: 'QMS & Other MS Implementation',
+    tagline: 'End-to-end design, policy drafting, SOP mapping, gap analysis, and stage-by-stage rollout of ISO & management systems.',
+    badge: 'Core Foundation',
+    description: 'Guiding organizations through comprehensive implementation of Quality Management Systems (ISO 9001, ISO 27001, ISO 14001, ISO 45001, ISO 22000, ISO 21001) with certified auditor guidance and stage-by-stage readiness.',
+    icon: 'ShieldCheck',
+    features: [
+      'Comprehensive ISO Gap Analysis & Readiness Audit',
+      'SOP & Process Architecture Mapping',
+      'Executive & Internal Auditor Certification Training',
+      'Stage 1 & Stage 2 Certification Body Support'
+    ],
+    deliverables: ['Custom Policy Frameworks', 'Process Flow Maps', 'Certified Auditor Playbooks'],
+    businessValue: ['Achieve 100% stage-2 audit pass rate', 'Standardize multi-department operating procedures']
+  },
+  {
+    id: 'qms-digital-transformation',
+    number: '02',
+    title: 'QMS & Other MS Digital Transformation',
+    tagline: 'Converting paper binders and static files into automated, cloud-based digital operating workflows.',
+    badge: 'Flagship Digital',
+    description: 'Transforming traditional paper-heavy management systems into high-velocity digital operating platforms using enterprise software with automated approval routes, real-time KPI dashboards, and cryptographic version control.',
+    icon: 'Layers',
+    features: [
+      'Automated Document Lifecycle & Cryptographic Approval Workflows',
+      'Digital Internal Audit Forms & Mobile Tablet Checklists',
+      'Automated Non-Conformities & 5-Why Root Cause CAPA Engine',
+      'Real-time Executive BI Management Review Dashboards'
+    ],
+    deliverables: ['Cloud Document Repository', 'Mobile Audit Apps', 'Live Quality Telemetry'],
+    businessValue: ['Eliminate 80%+ of physical paper archiving', 'Reduce audit preparation time by over 60%']
+  },
+  {
+    id: 'digital-risk-transformation',
+    number: '03',
+    title: 'Digital Risk Transformation',
+    tagline: 'Proactive risk scoring, continuous threat monitoring, and automated mitigation heatmaps.',
+    badge: 'Enterprise Agility',
+    description: 'Replacing static annual risk registers with dynamic, enterprise-wide digital risk management matrices that quantify probability, velocity, and impact across operational, financial, and cybersecurity dimensions.',
+    icon: 'TrendingUp',
+    features: [
+      'Real-time Interactive Enterprise Risk Heatmaps',
+      'Automated Risk Treatment & Mitigation Workflow Tracker',
+      'Residual Risk Gauges & Early Warning Indicator Thresholds',
+      'Multi-Site & Cross-Departmental Risk Consolidation'
+    ],
+    deliverables: ['Automated Risk Matrix', 'KRI Dashboard', 'Escalation Alert Engine'],
+    businessValue: ['Prevent operational surprises before audits occur', 'Align risk tolerances with executive strategy']
+  },
+  {
+    id: 'digital-esg-transformation',
+    number: '04',
+    title: 'Digital ESG Transformation',
+    tagline: 'Automated Scope 1-3 carbon tracking, sustainability reporting, and ESG governance data pipelines.',
+    badge: 'Future-Proof ESG',
+    description: 'Turning ESG commitments into verifiable, investor-grade metrics aligned with GRI, ISSB, and NSE ESG guidelines using automated data collection pipelines for energy, water, waste, and social governance.',
+    icon: 'Sprout',
+    features: [
+      'Automated Scope 1, 2 & 3 Carbon Footprint Calculations',
+      'NSE, GRI & ISSB Framework Disclosure Pipelines',
+      'Climate Physical & Transition Risk Vulnerability Matrix',
+      'Stakeholder Materiality & Social ROI Impact Tracking'
+    ],
+    deliverables: ['Investor-Ready ESG Reports', 'Automated Utility Meter Connectors', 'Carbon Factor Matrix'],
+    businessValue: ['Unlock green financing & global supply chain contracts', 'Standardize ESG compliance reporting']
+  },
+  {
+    id: 'digital-grc-transformation',
+    number: '05',
+    title: 'Digital GRC Transformation',
+    tagline: 'Unifying governance, risk management, and regulatory compliance into a single source of truth.',
+    badge: 'Unified Governance',
+    description: 'Harmonizing multiple overlapping regulatory frameworks (ISO, CMA, Data Protection Act, Anti-Bribery ISO 37001, Cyber Security) into a unified enterprise GRC architecture with continuous compliance telemetry.',
+    icon: 'Network',
+    features: [
+      'Multi-Framework Clause Mapping & Deduplication Engine',
+      'Automated Regulatory Task Workflows & Deadline Alerts',
+      'Instant External Auditor Evidence Package Generation',
+      'ISO 37001 Anti-Bribery & Whistleblower Portal Controls'
+    ],
+    deliverables: ['Unified GRC Control Matrix', 'Automated Evidence Repository', 'Regulator Readiness Telemetry'],
+    businessValue: ['Eliminate duplicate compliance audits across departments', 'Zero regulatory non-compliance fines']
+  },
+  {
+    id: 'ms-maintenance',
+    number: '06',
+    title: 'MS Maintenance',
+    tagline: 'Sustained post-certification compliance, ongoing internal audits, and continuous system optimization.',
+    badge: 'Continuous Excellence',
+    description: 'Ensuring management systems remain active, compliant, and continuously improving post-certification through outsourced internal audit schedules, surveillance audit preparation, annual policy reviews, and health checks.',
+    icon: 'Award',
+    features: [
+      'Managed Annual Internal Audit Program Execution',
+      'Surveillance & Recertification External Audit Preparation',
+      'Annual Policy & SOP Refresher Updates',
+      'Continuous System Optimization & Refresher Masterclasses'
+    ],
+    deliverables: ['Annual Audit Schedules', 'Surveillance Audit Playbooks', 'System Health Reports'],
+    businessValue: ['Maintain continuous 100% certification validity', 'Prevent management system decay and audit anxiety']
+  }
 ];
 
 export const SERVICE_PILLARS: ServicePillar[] = [
@@ -356,11 +474,11 @@ export const TECH_PARTNERS: TechPartner[] = [
 export const APPROACH_STEPS: ApproachStep[] = [
   {
     stepNumber: '01',
-    title: 'Discover & Diagnose',
-    subtitle: 'Meticulous Gap Analysis & Maturity Profiling',
-    duration: 'Weeks 1 - 3',
+    title: 'Gap Analysis',
+    subtitle: 'Diagnostic Assessment & Clause Baseline',
+    duration: 'Stage 1',
     summary:
-      'We conduct on-site and remote deep-dive diagnostics against targeted ISO clauses, statutory obligations, and operational pinch points.',
+      'We conduct on-site and remote deep-dive diagnostics against targeted ISO clauses, statutory obligations, and operational process gaps.',
     deliverables: [
       'Executive Gap Analysis Matrix & Heatmap',
       'Process Interdependency Mapping',
@@ -372,47 +490,47 @@ export const APPROACH_STEPS: ApproachStep[] = [
   },
   {
     stepNumber: '02',
+    title: 'Training',
+    subtitle: 'Capability Transfer & Authorized PECB Certification',
+    duration: 'Stage 2',
+    summary:
+      'We embed capability into your team through hands-on role training, PECB certified lead implementer coaching, and internal auditor enablement.',
+    deliverables: [
+      'Certified Internal Auditor Cohort',
+      'PECB Accredited Training & Examination',
+      'Role-Based Operational Worksheets',
+      'Management Review Briefings & Simulations',
+    ],
+    digitalTools: ['PECB Audit & Exam Portal', 'Learning Management System'],
+    afroPatternKey: 'pattern-diamond',
+  },
+  {
+    stepNumber: '03',
     title: 'Digitally Transform',
     subtitle: 'Process Architecture & Workflow Digitization',
-    duration: 'Weeks 4 - 8',
+    duration: 'Stage 3',
     summary:
       'We eliminate obsolete paper forms. Our solution architects convert SOPs, inspection sheets, and approvals into streamlined digital workflows.',
     deliverables: [
       'Digital Document & SOP Architecture',
       'Automated CAPA & Non-Conformity Logic',
-      'Configured SoftExpert / PECB Auditing Framework Templates',
+      'Configured SoftExpert QMS Workflow Templates',
       'Customized KPI & Quality Objective Dashboards',
     ],
-    digitalTools: ['PECB Audit & Exam Portal', 'SoftExpert Process Modeler'],
-    afroPatternKey: 'pattern-diamond',
-  },
-  {
-    stepNumber: '03',
-    title: 'Integrate & Empower',
-    subtitle: 'Systems Rollout & Capability Transfer',
-    duration: 'Weeks 9 - 14',
-    summary:
-      'We embed the digital operating system into daily team routines through hands-on role training, champion enablement, and internal auditor coaching.',
-    deliverables: [
-      'Certified Internal Auditor Cohort',
-      'Role-Based Quick-Reference Digital Guides',
-      'Automated Evidence Collection Infrastructure',
-      'Departmental Management Review Simulation',
-    ],
-    digitalTools: ['Interactive LMS', 'Live Simulation Sandbox'],
+    digitalTools: ['SoftExpert Process Modeler', 'Automated Approval Engine'],
     afroPatternKey: 'pattern-chevron',
   },
   {
     stepNumber: '04',
-    title: 'Continuous Excellence',
-    subtitle: 'Mock Audit, Certification & Ongoing Optimization',
-    duration: 'Weeks 15+',
+    title: 'Continual Improvement',
+    subtitle: 'Ongoing Monitoring, Audits & Optimization',
+    duration: 'Stage 4',
     summary:
-      'We conduct rigorous pre-assessment mock audits, accompany you through Stage 1 & 2 external certification audits, and establish continuous KPI loops.',
+      'We conduct pre-assessment mock audits, support external certification audits, and establish continuous KPI feedback loops for ongoing compliance.',
     deliverables: [
       'Formal Pre-Certification Mock Audit Report',
       'Accompaniment during External Certification Audit',
-      '100% First-Time Pass Guarantee Commitment',
+      'Continuous System Optimization & Refresher Masterclasses',
       'Annual Surveillance Maintenance & Optimization Program',
     ],
     digitalTools: ['Auditor Evidence Package Builder', 'Executive Governance Telemetry'],
@@ -490,20 +608,19 @@ export const CASE_STUDIES: CaseStudy[] = [
 ];
 
 export const FOUNDER_BOOK: FounderBook = {
-  title: 'ISO 9000 Secret',
-  subtitle: 'Unlocking World Markets',
-  author: 'Julius N.',
-  authorRole: 'Founder & Lead Management Systems Strategist, Quality Centre Limited',
+  title: 'A Concise Guide to Quality Management Based on ISO 9001',
+  subtitle: 'Implementing a Quality Management System',
+  author: 'Julius Njatha Muraguri',
+  authorRole: 'Management Systems Assessor, Lead Auditor & Founder, Quality Centre Limited',
   description:
-    'In this seminal work, Julius N. demystifies international quality standards for visionary entrepreneurs and corporate executives across Africa and developing economies. The book reveals how to stop viewing ISO as bureaucratic red tape and instead wield it as a lethal competitive weapon to dominate domestic tenders, conquer export barriers, and command premium pricing in global supply chains.',
+    'The book simplifies the ISO 9000 concepts and provides a practical approach to implementing a Quality Management System (QMS) based on the ISO 9001 International Standard.',
   keyTakeaways: [
-    'How African businesses can shatter international trade suspicion by mastering verifiable quality consistency.',
-    'The "Anti-Bureaucracy Method": Streamlining documentation so ISO fuels speed instead of paralyzing agility.',
-    'Winning lucrative corporate and government tenders through certified compliance credentials.',
-    'Bridging local operational culture with European, North American, and Asian import criteria.',
+    'Customer focus wins customers — Understand customer needs, create value, and consistently deliver on expectations.',
+    'Quality improvement is a journey — Building quality is not a one-time project but a sustained organizational commitment.',
+    'Continual improvement drives excellence — Keep identifying opportunities, learning from experience, and improving processes and results.',
   ],
   quote:
-    'Certification on the wall is useless if your processes remain slow, painful, and prone to error. Real ISO mastery is about speed, precision, and building an organization that can scale across borders without breaking.',
+    'Building quality is not a one-time project but a sustained organizational commitment to understanding customer needs, creating value, and continually improving processes and results.',
   purchaseUrl: '#book-consultation',
   socialLinks: {
     companyLinkedIn: 'https://www.linkedin.com/company/quality-centreke/',
