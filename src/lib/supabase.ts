@@ -26,53 +26,36 @@ export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
  * Fetch latest CMS configuration directly from live Supabase database
  */
 export async function fetchLiveDatabase() {
-  const cacheBusterUrl = `${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json?t=${Date.now()}&_b=${Math.random().toString(36).slice(2)}`;
-
-  // 1. Direct cache-bypassing authenticated HTTP fetch from Supabase Storage origin
+  // 1. Fetch via dynamic short-lived signed URL to guarantee bypassing Cloudflare edge cache
   try {
-    const headers: Record<string, string> = {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-    };
-    if (SUPABASE_SERVICE_KEY) {
-      headers['Authorization'] = `Bearer ${SUPABASE_SERVICE_KEY}`;
-      headers['apikey'] = SUPABASE_SERVICE_KEY;
+    const { data, error } = await supabaseAdmin.storage.from('site-data').createSignedUrl('cms-database.json', 300);
+    if (!error && data?.signedUrl) {
+      const res = await fetch(data.signedUrl, { cache: 'no-store' });
+      if (res.ok) {
+        const parsed = await res.json();
+        if (parsed && (parsed.clientLogos || parsed.companyConfig || parsed.heroConfig || parsed.successStories)) {
+          return parsed;
+        }
+      }
     }
+  } catch (adminErr) {
+    console.warn('Signed URL Supabase fetch notice:', adminErr);
+  }
 
-    const res = await fetch(cacheBusterUrl, {
-      cache: 'no-store',
-      headers,
-    });
-
-    if (res.ok) {
-      const parsed = await res.json();
+  // 2. Direct authenticated download via SDK
+  try {
+    const { data, error } = await supabaseAdmin.storage.from('site-data').download('cms-database.json');
+    if (!error && data) {
+      const text = await data.text();
+      const parsed = JSON.parse(text);
       if (parsed && (parsed.clientLogos || parsed.companyConfig || parsed.heroConfig || parsed.successStories)) {
         return parsed;
       }
     }
-  } catch (adminErr) {
-    console.warn('Direct Supabase live DB fetch notice:', adminErr);
+  } catch (sdkErr) {
+    console.warn('SDK download fetch notice:', sdkErr);
   }
 
-  // 2. Secondary public URL fetch with aggressive cache-busting
-  try {
-    const publicUrl = `${LIVE_SUPABASE_DB_URL}?t=${Date.now()}&_b=${Math.random().toString(36).slice(2)}`;
-    const res = await fetch(publicUrl, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-      },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && (data.clientLogos || data.companyConfig || data.heroConfig || data.successStories)) {
-        return data;
-      }
-    }
-  } catch (err) {
-    console.warn('Live Supabase database fallback fetch notice:', err);
-  }
   return null;
 }
 

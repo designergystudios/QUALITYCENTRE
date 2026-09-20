@@ -23,8 +23,8 @@ export const Hero: React.FC<HeroProps> = ({
   const { isDark } = useTheme();
   const { heroConfig, openAdmin } = useCms();
 
-  const scrollToGallery = () => {
-    const el = document.getElementById('gallery');
+  const scrollToNext = () => {
+    const el = document.getElementById('about');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
@@ -120,18 +120,6 @@ export const Hero: React.FC<HeroProps> = ({
                 : 'Talk to our expert'}
             </span>
           </button>
-
-          <button
-            onClick={scrollToGallery}
-            className={`w-full sm:w-auto px-6 py-4 rounded-xl font-medium text-sm sm:text-base transition-all flex items-center justify-center gap-2 ${
-              isDark
-                ? 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Play className="w-4 h-4 text-[#00A9CF]" />
-            <span>View Media Gallery</span>
-          </button>
         </motion.div>
 
         {/* Quick Credentials Strip */}
@@ -188,9 +176,9 @@ export const Hero: React.FC<HeroProps> = ({
         {/* Scroll indicator prompt */}
         <div className="mt-12 flex justify-center">
           <button
-            onClick={scrollToGallery}
+            onClick={scrollToNext}
             className="animate-bounce p-2 rounded-full text-slate-400 hover:text-[#00A9CF] transition-colors"
-            title="Scroll down to media gallery"
+            title="Scroll down"
           >
             <ChevronDown className="w-5 h-5" />
           </button>

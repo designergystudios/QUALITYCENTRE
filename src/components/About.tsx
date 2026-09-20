@@ -65,9 +65,9 @@ export const About: React.FC<AboutProps> = ({ onOpenConsultation }) => {
               isDark ? 'text-white' : 'text-slate-900'
             }`}
           >
-            Engineering High-Performance{' '}
+            Digitally-enabled{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-sky-500 to-amber-500">
-              Operating Systems
+              Management Systems
             </span>
           </h2>
           <p
@@ -81,95 +81,7 @@ export const About: React.FC<AboutProps> = ({ onOpenConsultation }) => {
           </p>
         </div>
 
-        {/* Mission Statement Box with Afro-Futuristic Framing */}
-        <div className="relative rounded-2xl p-0.5 bg-gradient-to-r from-cyan-500/40 via-amber-500/30 to-cyan-500/40 shadow-xl">
-          <div
-            className={`relative rounded-[15px] backdrop-blur-md p-8 sm:p-10 border overflow-hidden transition-colors ${
-              isDark ? 'bg-[#0F172A]/95 border-slate-800' : 'bg-slate-50 border-slate-200'
-            }`}
-          >
-            <div className="absolute top-0 right-0 w-48 h-48 opacity-15 pointer-events-none">
-              <AfroPattern variant="circuit" opacity={0.6} />
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              <div className="lg:col-span-8 space-y-4">
-                <div
-                  className={`flex items-center gap-2 text-xs font-mono font-bold tracking-wider uppercase ${
-                    isDark ? 'text-amber-400' : 'text-amber-600'
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Our Core Purpose & Mission Statement
-                </div>
-                <blockquote
-                  className={`text-xl sm:text-2xl md:text-3xl font-bold leading-snug transition-colors ${
-                    isDark ? 'text-white' : 'text-slate-900'
-                  }`}
-                >
-                  “Empowering organizations to succeed through{' '}
-                  <span className="text-cyan-500 underline decoration-amber-500/50 decoration-wavy decoration-2">
-                    faster, easier, and better
-                  </span>{' '}
-                  business processes.”
-                </blockquote>
-                <p
-                  className={`text-sm sm:text-base leading-relaxed pt-2 transition-colors ${
-                    isDark ? 'text-slate-300' : 'text-slate-600'
-                  }`}
-                >
-                  For over two decades, Kenyan and regional leaders have turned to Quality Centre Limited
-                  to eliminate manual compliance burdens, eradicate audit anxiety, and transform
-                  regulatory compliance into a powerful engine for market dominance and global competitiveness.
-                </p>
-              </div>
-
-              <div
-                className={`lg:col-span-4 flex flex-col gap-3 justify-center border-t lg:border-t-0 lg:border-l lg:pl-8 pt-4 lg:pt-0 transition-colors ${
-                  isDark ? 'border-slate-800' : 'border-slate-200'
-                }`}
-              >
-                <div
-                  className={`text-xs font-semibold uppercase tracking-wider ${
-                    isDark ? 'text-slate-400' : 'text-slate-500'
-                  }`}
-                >
-                  Our Three Pillars of Impact
-                </div>
-                <div
-                  className={`flex items-center gap-3 text-sm font-medium ${
-                    isDark ? 'text-slate-200' : 'text-slate-800'
-                  }`}
-                >
-                  <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-500 font-bold text-xs">
-                    01
-                  </div>
-                  <span>Velocity: 60%+ Faster Audit Prep</span>
-                </div>
-                <div
-                  className={`flex items-center gap-3 text-sm font-medium ${
-                    isDark ? 'text-slate-200' : 'text-slate-800'
-                  }`}
-                >
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-600 font-bold text-xs">
-                    02
-                  </div>
-                  <span>Simplicity: Zero Bureaucracy Paperwork</span>
-                </div>
-                <div
-                  className={`flex items-center gap-3 text-sm font-medium ${
-                    isDark ? 'text-slate-200' : 'text-slate-800'
-                  }`}
-                >
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-600 font-bold text-xs">
-                    03
-                  </div>
-                  <span>Resilience: 100% Audit Readiness Always</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* 4 Quantitative Impact Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

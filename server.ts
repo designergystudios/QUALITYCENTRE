@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
+import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 const PORT = 3000;
@@ -13,6 +14,8 @@ const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   '[REDACTED-SECRET]';
 
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // Ensure required directories exist
 fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -21,29 +24,20 @@ fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 let lastCloudPullTime = 0;
 async function syncDatabaseFromSupabase(force = false) {
   try {
-    const headers: Record<string, string> = {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-    };
-    if (SUPABASE_KEY) {
-      headers['Authorization'] = `Bearer ${SUPABASE_KEY}`;
-      headers['apikey'] = SUPABASE_KEY;
-    }
-    const cacheBusterUrl = `${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json?t=${Date.now()}&_b=${Math.random().toString(36).slice(2)}`;
-    const res = await fetch(cacheBusterUrl, {
-      cache: 'no-store',
-      headers,
-    });
-    if (res.ok) {
-      const cloudDb = await res.json();
-      const localDb = readDatabase();
-      const cloudTime = Number(cloudDb.lastUpdated || 0);
-      const localTime = Number(localDb?.lastUpdated || 0);
-      if (force || !localDb || localTime === 0 || cloudTime >= localTime) {
-        fs.writeFileSync(DB_FILE, JSON.stringify(cloudDb, null, 2), 'utf-8');
-        console.log('Synchronized local database from Supabase cloud snapshot');
-      } else if (localTime > cloudTime) {
-        await syncDatabaseToSupabase(localDb);
+    const { data: signData, error } = await supabaseAdmin.storage.from('site-data').createSignedUrl('cms-database.json', 300);
+    if (!error && signData?.signedUrl) {
+      const res = await fetch(signData.signedUrl, { cache: 'no-store' });
+      if (res.ok) {
+        const cloudDb = await res.json();
+        const localDb = readDatabase();
+        const cloudTime = Number(cloudDb.lastUpdated || 0);
+        const localTime = Number(localDb?.lastUpdated || 0);
+        if (force || !localDb || localTime === 0 || cloudTime >= localTime) {
+          fs.writeFileSync(DB_FILE, JSON.stringify(cloudDb, null, 2), 'utf-8');
+          console.log('Synchronized local database from Supabase cloud snapshot');
+        } else if (localTime > cloudTime) {
+          await syncDatabaseToSupabase(localDb);
+        }
       }
     }
     lastCloudPullTime = Date.now();
@@ -225,31 +219,23 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.get('/api/cms', async (req: Request, res: Response) => {
   const localDb = readDatabase();
   try {
-    const headers: Record<string, string> = {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-    };
-    if (SUPABASE_KEY) {
-      headers['Authorization'] = `Bearer ${SUPABASE_KEY}`;
-      headers['apikey'] = SUPABASE_KEY;
-    }
-    const cloudRes = await fetch(`${SUPABASE_URL}/storage/v1/object/site-data/cms-database.json?t=${Date.now()}&_b=${Math.random().toString(36).slice(2)}`, {
-      cache: 'no-store',
-      headers,
-    });
-    if (cloudRes.ok) {
-      const cloudData = await cloudRes.json();
-      if (cloudData && (cloudData.clientLogos || cloudData.companyConfig || cloudData.heroConfig || cloudData.successStories)) {
-        const cloudTime = Number(cloudData.lastUpdated || 0);
-        const localTime = Number(localDb?.lastUpdated || 0);
+    const { data: signData, error } = await supabaseAdmin.storage.from('site-data').createSignedUrl('cms-database.json', 300);
+    if (!error && signData?.signedUrl) {
+      const cloudRes = await fetch(signData.signedUrl, { cache: 'no-store' });
+      if (cloudRes.ok) {
+        const cloudData = await cloudRes.json();
+        if (cloudData && (cloudData.clientLogos || cloudData.companyConfig || cloudData.heroConfig || cloudData.successStories)) {
+          const cloudTime = Number(cloudData.lastUpdated || 0);
+          const localTime = Number(localDb?.lastUpdated || 0);
 
-        if (!localDb || localTime === 0 || cloudTime >= localTime) {
-          try {
-            fs.writeFileSync(DB_FILE, JSON.stringify(cloudData, null, 2), 'utf-8');
-          } catch {}
-          return res.json(cloudData);
-        } else {
-          return res.json(localDb);
+          if (!localDb || localTime === 0 || cloudTime >= localTime) {
+            try {
+              fs.writeFileSync(DB_FILE, JSON.stringify(cloudData, null, 2), 'utf-8');
+            } catch {}
+            return res.json(cloudData);
+          } else {
+            return res.json(localDb);
+          }
         }
       }
     }

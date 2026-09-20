@@ -7,8 +7,6 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { ClientLogoCarousel } from './components/ClientLogoCarousel';
-import { ComplianceTelemetry } from './components/ComplianceTelemetry';
-import { Gallery } from './components/Gallery';
 import { About } from './components/About';
 import { Services } from './components/Services';
 import { Approach } from './components/Approach';
@@ -48,8 +46,6 @@ export default function App() {
   useEffect(() => {
     const sectionIds = [
       'home',
-      'telemetry',
-      'gallery',
       'about',
       'services',
       'approach',
@@ -96,16 +92,6 @@ export default function App() {
 
         {/* 1.5. Client Logo Carousel */}
         <ClientLogoCarousel />
-
-        {/* 2. Live Compliance Telemetry Cockpit */}
-        <ComplianceTelemetry
-          onOpenConsultation={(topic) => handleOpenConsultation(topic)}
-        />
-
-        {/* 3. Interactive Image and Video Gallery */}
-        <Gallery
-          onOpenConsultation={(topic) => handleOpenConsultation(topic)}
-        />
 
         {/* 5. About Us Section (Who We Are, Mission, SoftExpert & PECB Partners) */}
         <About onOpenConsultation={(topic) => handleOpenConsultation(topic)} />
